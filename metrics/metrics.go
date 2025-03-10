@@ -14,6 +14,7 @@ func RegisterMetrics(registry prometheus.Registerer) {
 	registry.MustRegister(relayRequestSuccessCounter)
 	registry.MustRegister(relayRequestFailedCounter)
 	registry.MustRegister(relayRequestRetryCounter)
+	registry.MustRegister(relayE2ERequestFailedCounter)
 	registry.MustRegister(relayRequestDurationObsever)
 }
 
@@ -42,6 +43,12 @@ var (
 			Name:      "relay_request_retry",
 			Help:      "Total number of relay request retry",
 		}, []string{"channel", "group"})
+	relayE2ERequestFailedCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Subsystem: Namespace,
+			Name:      "relay_e2e_request_failed",
+			Help:      "Total number of e2e relay request failed",
+		}, []string{"channel", "model", "group", "code", "msg"})
 	relayRequestDurationObsever = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Subsystem: Namespace,
@@ -67,6 +74,10 @@ func IncrementRelayRequestFailedCounter(channel, model, group, code, msg string,
 
 func IncrementRelayRetryCounter(channel, group string, add float64) {
 	relayRequestRetryCounter.WithLabelValues(channel, group).Add(add)
+}
+
+func IncrementRelayE2ERequestFailedCounter(channel, model, group, code, msg string, add float64) {
+	relayE2ERequestFailedCounter.WithLabelValues(channel, model, group, code, msg).Add(add)
 }
 
 func ObserveRelayRequestDuration(channel, model, group string, duration float64) {
