@@ -6,6 +6,7 @@ import (
 	"one-api/common"
 	"one-api/model"
 	"strconv"
+	"strings"
 )
 
 func GetAllTokens(c *gin.Context) {
@@ -172,6 +173,10 @@ func AddToken(c *gin.Context) {
 		ModelLimits:        token.ModelLimits,
 		AllowIps:           token.AllowIps,
 		Group:              token.Group,
+		Timeout:            token.Timeout,
+		ModelTimeout:       strings.Replace(token.ModelTimeout, "，", ",", -1),
+		MaxModelPriority:   strings.Replace(token.MaxModelPriority, "，", ",", -1),
+		ExpectModelRPM:     strings.Replace(token.ExpectModelRPM, "，", ",", -1),
 	}
 	err = cleanToken.Insert()
 	if err != nil {
@@ -261,6 +266,11 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.ModelLimits = token.ModelLimits
 		cleanToken.AllowIps = token.AllowIps
 		cleanToken.Group = token.Group
+		cleanToken.Timeout = token.Timeout
+		cleanToken.ModelTimeout = strings.Replace(token.ModelTimeout, "，", ",", -1)
+		cleanToken.MaxModelPriority = strings.Replace(token.MaxModelPriority, "，", ",", -1)
+		cleanToken.ExpectModelRPM = strings.Replace(token.ExpectModelRPM, "，", ",", -1)
+
 	}
 	err = cleanToken.Update()
 	if err != nil {

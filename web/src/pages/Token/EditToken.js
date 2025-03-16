@@ -37,6 +37,10 @@ const EditToken = (props) => {
     model_limits: [],
     allow_ips: '',
     group: '',
+    timeout: 600,
+    model_timeout: "",
+    max_model_priority: "",
+    expect_model_rpm: "",
   };
   const [inputs, setInputs] = useState(originInputs);
   const {
@@ -47,7 +51,11 @@ const EditToken = (props) => {
     model_limits_enabled,
     model_limits,
     allow_ips,
-    group
+    group,
+    timeout ,
+    model_timeout ,
+    max_model_priority  ,
+    expect_model_rpm
   } = inputs;
   // const [visible, setVisible] = useState(false);
   const [models, setModels] = useState([]);
@@ -463,6 +471,54 @@ const EditToken = (props) => {
               disabled={true}
             />
           }
+          <div className="form-item">
+            <Typography.Text strong>{t('超时时间 (秒)')}</Typography.Text>
+            <Input
+                type="number"
+                value={inputs.timeout}
+                onChange={(value) => handleInputChange('timeout', parseInt(value) || 600)}
+                style={{ width: '100%' }}
+                min={1}
+                placeholder={t('请输入请求超时时间，默认为600秒')}
+            />
+            <Typography.Text type="tertiary">{t('请求的最大等待时间，单位为秒')}</Typography.Text>
+          </div>
+
+          <div className="form-item">
+            <Typography.Text strong>{t('特定模型超时时间')}</Typography.Text>
+            <TextArea
+                value={inputs.model_timeout}
+                onChange={(value) => handleInputChange('model_timeout', value)}
+                style={{ width: '100%' }}
+                placeholder={t('格式: gpt-4o:90,gpt-4o-mini:100')}
+                autosize={{ minRows: 2, maxRows: 6 }}
+            />
+            <Typography.Text type="tertiary">{t('特定模型的超时时间设置，格式为 "模型名:超时秒数"，多个以逗号分隔')}</Typography.Text>
+          </div>
+
+          <div className="form-item">
+            <Typography.Text strong>{t('模型优先级')}</Typography.Text>
+            <TextArea
+                value={inputs.max_model_priority}
+                onChange={(value) => handleInputChange('max_model_priority', value)}
+                style={{ width: '100%' }}
+                placeholder={t('格式: gpt-4o:10,gpt-4o-mini:5')}
+                autosize={{ minRows: 2, maxRows: 6 }}
+            />
+            <Typography.Text type="tertiary">{t('不同模型的优先级设置，数字越大优先级越高，格式为 "模型名:优先级"，多个以逗号分隔')}</Typography.Text>
+          </div>
+
+          <div className="form-item">
+            <Typography.Text strong>{t('期望每分钟请求数')}</Typography.Text>
+            <TextArea
+                value={inputs.expect_model_rpm}
+                onChange={(value) => handleInputChange('expect_model_rpm', value)}
+                style={{ width: '100%' }}
+                placeholder={t('格式: gpt-4o:9000,gpt-4o-mini:10000')}
+                autosize={{ minRows: 2, maxRows: 6 }}
+            />
+            <Typography.Text type="tertiary">{t('不同模型的期望每分钟请求数，格式为 "模型名:请求数"，多个以逗号分隔')}</Typography.Text>
+          </div>
         </Spin>
       </SideSheet>
     </>

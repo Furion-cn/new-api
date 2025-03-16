@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"one-api/common"
+	"strconv"
 	"strings"
 
 	"github.com/bytedance/gopkg/util/gopool"
@@ -27,6 +28,10 @@ type Token struct {
 	UsedQuota          int            `json:"used_quota" gorm:"default:0"` // used quota
 	Group              string         `json:"group" gorm:"default:''"`
 	DeletedAt          gorm.DeletedAt `gorm:"index"`
+	Timeout            int            `json:"timeout" gorm:"default:600"`
+	ModelTimeout       string         `json:"model_timeout" gorm:"type:varchar(1024);default:''"`      // such as gpt-4o:90,gpt-4o-mini:100
+	MaxModelPriority   string         `json:"max_model_priority" gorm:"type:varchar(1024);default:''"` // such as gpt-4o:10,gpt-4o-mini:5
+	ExpectModelRPM     string         `json:"expect_model_rpm" gorm:"type:varchar(1024);default:''"`   // such as gpt-4o:9000,gpt-4o-mini:10000
 }
 
 func (token *Token) Clean() {
@@ -53,6 +58,61 @@ func (token *Token) GetIpLimitsMap() map[string]any {
 		}
 	}
 	return ipLimitsMap
+}
+
+func (token *Token) GetTokenModelTimeoutMap() map[string]int {
+	mt := map[string]int{}
+	mts := strings.Split(token.ModelTimeout, ",")
+	for _, modelTimeout := range mts {
+		mtt := strings.Split(modelTimeout, "=")
+		if len(mtt) != 2 {
+			continue
+		}
+		timeoutSeconds, err := strconv.Atoi(mtt[1])
+		if err != nil {
+			continue
+		}
+		mt[mtt[0]] = timeoutSeconds
+	}
+	return mt
+}
+
+// GetTokenMaxModelPriorityMap 将 MaxModelPriority 字符串解析为 map[string]int 形式
+// MaxModelPriority 格式示例: "gpt-4o=10,gpt-4o-mini=5"
+func (token *Token) GetTokenMaxModelPriorityMap() map[string]int {
+	mp := map[string]int{}
+	priorities := strings.Split(token.MaxModelPriority, ",")
+	for _, modelPriority := range priorities {
+		mpt := strings.Split(modelPriority, "=")
+		if len(mpt) != 2 {
+			continue
+		}
+		priorityValue, err := strconv.Atoi(mpt[1])
+		if err != nil {
+			continue
+		}
+		mp[mpt[0]] = priorityValue
+	}
+	return mp
+}
+
+// GetTokenExpectModelRPMMap 将 ExpectModelRPM 字符串解析为 map[string]int 形式
+// ExpectModelRPM 格式示例: "gpt-4o=9000,gpt-4o-mini=10000"
+func (token *Token) GetTokenExpectModelRPMMap() map[string]int {
+	rpm := map[string]int{}
+	rpms := strings.Split(token.ExpectModelRPM, ",")
+	for _, modelRPM := range rpms {
+		rpmt := strings.Split(modelRPM, "=")
+		if len(rpmt) != 2 {
+			continue
+		}
+		rpmValue, err := strconv.Atoi(rpmt[1])
+		if err != nil {
+			continue
+		}
+		rpm[rpmt[0]] = rpmValue
+	}
+	return rpm
 }
 
 func GetAllUserTokens(userId int, startIdx int, num int) ([]*Token, error) {
@@ -191,7 +251,7 @@ func (token *Token) Update() (err error) {
 		}
 	}()
 	err = DB.Model(token).Select("name", "status", "expired_time", "remain_quota", "unlimited_quota",
-		"model_limits_enabled", "model_limits", "allow_ips", "group").Updates(token).Error
+		"model_limits_enabled", "model_limits", "allow_ips", "group", "timeout", "model_timeout", "max_model_priority", "expect_model_rpm").Updates(token).Error
 	return err
 }
 
