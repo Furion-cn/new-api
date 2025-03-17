@@ -2,12 +2,34 @@ package model
 
 import (
 	"encoding/json"
+	"gorm.io/gorm"
 	"one-api/common"
 	"strings"
 	"sync"
-
-	"gorm.io/gorm"
+	"time"
 )
+
+type ChannelRequestRecord struct {
+	Model       string
+	ErrorCode   int
+	UserTimeout bool
+	Duration    time.Duration
+}
+
+// 如果是直联, 那么可以考虑 RPM/429/其他异常封禁的情况, 本质就是是否可用, 持续探测是否恢复.
+/*
+	如果是中转
+	单一中转 : 重试 2 次或者重试超过用户超时时间的 1/2 则进入下一个权重
+	多个中转 : 同上
+	失败后重试到低权重渠道 : 要留出来超时时间
+	中转失败率越高, 则流量权重越低
+*/
+
+type ChannelRuntime struct {
+	Mutex             sync.RWMutex
+	ModelRequestCh    chan *ChannelRequestRecord
+	UnavailableModels map[string]struct{}
+}
 
 type Channel struct {
 	Id                 int     `json:"id"`
@@ -30,12 +52,13 @@ type Channel struct {
 	UsedQuota          int64   `json:"used_quota" gorm:"bigint;default:0"`
 	ModelMapping       *string `json:"model_mapping" gorm:"type:text"`
 	//MaxInputTokens     *int    `json:"max_input_tokens" gorm:"default:0"`
-	StatusCodeMapping *string `json:"status_code_mapping" gorm:"type:varchar(1024);default:''"`
-	Priority          *int64  `json:"priority" gorm:"bigint;default:0"`
-	AutoBan           *int    `json:"auto_ban" gorm:"default:1"`
-	OtherInfo         string  `json:"other_info"`
-	Tag               *string `json:"tag" gorm:"index"`
-	Setting           string  `json:"setting" gorm:"type:text"`
+	StatusCodeMapping *string        `json:"status_code_mapping" gorm:"type:varchar(1024);default:''"`
+	Priority          *int64         `json:"priority" gorm:"bigint;default:0"`
+	AutoBan           *int           `json:"auto_ban" gorm:"default:1"` //如果是中转渠道则不要开启自动封禁
+	OtherInfo         string         `json:"other_info"`
+	Tag               *string        `json:"tag" gorm:"index"`
+	Setting           string         `json:"setting" gorm:"type:text"`
+	Runtime           ChannelRuntime `json:"-" gorm:"-"`
 }
 
 func (channel *Channel) GetModels() []string {
