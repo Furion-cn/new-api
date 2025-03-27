@@ -2,8 +2,8 @@ package setting
 
 import "strings"
 
-var CheckSensitiveEnabled = true
-var CheckSensitiveOnPromptEnabled = true
+var CheckSensitiveEnabled = false
+var CheckSensitiveOnPromptEnabled = false
 
 //var CheckSensitiveOnCompletionEnabled = true
 
@@ -35,8 +35,10 @@ func SensitiveWordsFromString(s string) {
 }
 
 func ShouldCheckPromptSensitive() bool {
-	return CheckSensitiveEnabled && CheckSensitiveOnPromptEnabled
+	//return CheckSensitiveEnabled && CheckSensitiveOnPromptEnabled
+	return false
 }
+
 
 //func ShouldCheckCompletionSensitive() bool {
 //	return CheckSensitiveEnabled && CheckSensitiveOnCompletionEnabled

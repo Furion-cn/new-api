@@ -106,6 +106,7 @@ func TextHelper(c *gin.Context, relayInfo *relaycommon.RelayInfo, textRequest *d
 	}()
 
 	if setting.ShouldCheckPromptSensitive() {
+		common.LogInfo(c, "sensitive ....................................furion")
 		words, err := checkRequestSensitive(textRequest, relayInfo)
 		if err != nil {
 			funcErr = service.OpenAIErrorWrapperLocal(err, "sensitive_words_detected", http.StatusBadRequest)
