@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	onecommon "one-api/common"
 	"one-api/relay/common"
 	"one-api/relay/constant"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -101,12 +103,51 @@ func DoWssRequest(a Adaptor, c *gin.Context, info *common.RelayInfo, requestBody
 
 func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http.Response, error) {
 	// Check if mock response is enabled and test traffic header is present
+	var response *http.Response
+
 	if onecommon.MockResponseEnabled && c.GetHeader("X-Test-Traffic") == "true" {
-		// Create a mock response
-		response := &http.Response{
-			StatusCode: http.StatusOK,
-			Header:     make(http.Header),
-			Body: io.NopCloser(bytes.NewBufferString(`{
+		// 如果是测试流量，延迟10秒
+		time.Sleep(10 * time.Second)
+
+		// 生成随机数，10%概率返回错误
+		if rand.Float32() < 0.1 {
+			errorResponse := `{
+				"error": {
+					"message": "Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details.",
+					"type": "internal_error",
+					"code": 500
+				}
+			}`
+			response = &http.Response{
+				StatusCode: http.StatusInternalServerError,
+				Header:     make(http.Header),
+				Body:       io.NopCloser(bytes.NewBufferString(errorResponse)),
+			}
+			response.Header.Set("Content-Type", "application/json")
+			return response, nil
+		}
+
+		var responseBody string
+		if strings.Contains(strings.ToLower(info.UpstreamModelName), "gemini") {
+			responseBody = `{
+				"candidates": [{
+					"content": {
+						"parts": [{
+							"text": "测试结果是1 + 1 = 2"
+						}],
+						"role": "model"
+					},
+					"finishReason": "STOP",
+					"index": 0
+				}],
+				"usageMetadata": {
+					"promptTokenCount": 10,
+					"candidatesTokenCount": 10,
+					"totalTokenCount": 20
+				}
+			}`
+		} else {
+			responseBody = `{
 				"id": "mock-response",
 				"model": "gpt-3.5-turbo",
 				"object": "chat.completion",
@@ -116,11 +157,16 @@ func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http
 						"content": "测试结果是1 + 1 = 2"
 					}
 				}]
-			}`)),
+			}`
+		}
+		response = &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     make(http.Header),
+			Body:       io.NopCloser(bytes.NewBufferString(responseBody)),
 		}
 		// 设置正确的 Content-Type 头
 		response.Header.Set("Content-Type", "application/json")
-		return response, nil
+
 	}
 
 	// Create HTTP client
@@ -137,12 +183,18 @@ func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http
 	// 打印请求头
 	onecommon.LogInfo(c, fmt.Sprintf("request headers: %v", req.Header))
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	if resp == nil {
-		return nil, errors.New("resp is nil")
+	var resp *http.Response
+	if response == nil {
+		var err error
+		resp, err = client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		if resp == nil {
+			return nil, errors.New("resp is nil")
+		}
+	} else {
+		resp = response
 	}
 
 	// 打印响应头
