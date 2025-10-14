@@ -31,9 +31,9 @@ func init() {
 	secretKey := os.Getenv("COS_SECRET_KEY")
 
 	// 创建写入器，设置较小的文件大小限制来测试轮转
-	writer, err := NewJSONLWriterWithCOS(tempDir, "jsonl_log_", "log", 10000,
+	writer, err := NewJSONLWriterWithCOSAndDelete(tempDir, "jsonl_log_", "log", 10000,
 		120*time.Second, 10000, 100*1024*1024,
-		cosBucket, cosRegion, cosPrefix, secretID, secretKey)
+		cosBucket, cosRegion, cosPrefix, secretID, secretKey, true)
 	if err != nil {
 		fmt.Printf("Failed to create writer: %v", err)
 	}
@@ -57,28 +57,30 @@ type JSONLWriter struct {
 	closed        bool
 
 	// COS 相关字段
-	cosClient *cos.Client
-	cosBucket string
-	cosRegion string
-	cosPrefix string // COS 对象前缀
+	cosClient         *cos.Client
+	cosBucket         string
+	cosRegion         string
+	cosPrefix         string // COS 对象前缀
+	deleteAfterUpload bool   // 上传后是否删除本地文件
 }
 
-// 初始化写入器（支持 COS 上传）
-func NewJSONLWriterWithCOS(dir, baseName, customFile string, flushSize int, flushInterval time.Duration, channelBuffer int, maxFileSize int64, cosBucket, cosRegion, cosPrefix, secretID, secretKey string) (*JSONLWriter, error) {
+// 初始化写入器（支持 COS 上传和删除选项）
+func NewJSONLWriterWithCOSAndDelete(dir, baseName, customFile string, flushSize int, flushInterval time.Duration, channelBuffer int, maxFileSize int64, cosBucket, cosRegion, cosPrefix, secretID, secretKey string, deleteAfterUpload bool) (*JSONLWriter, error) {
 	writer := &JSONLWriter{
-		dir:           dir,
-		baseName:      baseName,
-		customFile:    customFile,
-		buffer:        make([]interface{}, 0, flushSize),
-		flushSize:     flushSize,
-		flushInterval: flushInterval,
-		ch:            make(chan interface{}, channelBuffer),
-		ctxCancel:     make(chan struct{}),
-		maxFileSize:   maxFileSize,
-		closed:        false,
-		cosBucket:     cosBucket,
-		cosRegion:     cosRegion,
-		cosPrefix:     cosPrefix,
+		dir:               dir,
+		baseName:          baseName,
+		customFile:        customFile,
+		buffer:            make([]interface{}, 0, flushSize),
+		flushSize:         flushSize,
+		flushInterval:     flushInterval,
+		ch:                make(chan interface{}, channelBuffer),
+		ctxCancel:         make(chan struct{}),
+		maxFileSize:       maxFileSize,
+		closed:            false,
+		cosBucket:         cosBucket,
+		cosRegion:         cosRegion,
+		cosPrefix:         cosPrefix,
+		deleteAfterUpload: deleteAfterUpload,
 	}
 
 	// 初始化 COS 客户端
@@ -260,6 +262,17 @@ func (w *JSONLWriter) uploadToCOS(filePath string) error {
 	}
 
 	fmt.Printf("☁️  文件已上传到 COS - 本地文件: %s, COS 对象: %s\n", filePath, objectKey)
+
+	// 如果配置了上传后删除，则删除本地文件
+	if w.deleteAfterUpload {
+		if err := os.Remove(filePath); err != nil {
+			fmt.Printf("⚠️  删除本地文件失败: %s, 错误: %v\n", filePath, err)
+			// 不返回错误，避免影响上传成功的状态
+		} else {
+			fmt.Printf("🗑️  本地文件已删除: %s\n", filePath)
+		}
+	}
+
 	return nil
 }
 
