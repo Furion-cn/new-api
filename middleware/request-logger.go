@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"io"
 	"one-api/common"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-// EnableRequestBodyLogging 控制是否打印请求体
-var EnableRequestBodyLogging bool = false
+// EnableRequestBodyLogging 控制是否打印请求体，通过环境变量 ENABLE_REQUEST_BODY_LOGGING 控制
+var EnableRequestBodyLogging bool = common.GetEnvOrDefaultBool("ENABLE_REQUEST_BODY_LOGGING", false)
 
 func RequestLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -41,7 +42,8 @@ func RequestLogger() gin.HandlerFunc {
 
 		// 如果启用了请求体日志，则记录请求体
 		if EnableRequestBodyLogging && c.Request.Method != "GET" {
-			bodyInfo := common.LogRequestBody(c)
+			truncateMod := os.Getenv("LOG_TRUNCATE_TYPE")
+			bodyInfo := common.LogRequestBody(c, truncateMod)
 			if bodyInfo != "" {
 				logInfo += fmt.Sprintf("\tBody: %s", bodyInfo)
 			}

@@ -167,7 +167,7 @@ func TruncatedBody(body string, contentType string) string {
 }
 
 // logRequestBody 记录请求体信息
-func LogRequestBody(c *gin.Context) string {
+func LogRequestBody(c *gin.Context, truncateMod string) string {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		return ""
@@ -176,6 +176,9 @@ func LogRequestBody(c *gin.Context) string {
 	// 恢复请求体
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 
+	if truncateMod == "NO" {
+		return string(body)
+	}
 	// 检查是否为 multipart/form-data
 	contentType := c.GetHeader("Content-Type")
 	if strings.HasPrefix(contentType, "multipart/form-data") {
