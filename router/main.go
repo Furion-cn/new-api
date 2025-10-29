@@ -13,6 +13,7 @@ import (
 
 func SetRouter(router *gin.Engine, buildFS embed.FS, indexPage []byte) {
 	SetControllerRouter(router)
+	SetGrafanaRouter(router) // Grafana路由需要先注册，避免被其他路由拦截
 	SetApiRouter(router)
 	SetDashboardRouter(router)
 	SetRelayRouter(router)

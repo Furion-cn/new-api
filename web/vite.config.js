@@ -54,13 +54,18 @@ export default defineConfig({
   server: {
     port: 80,  // 设置端口为 80
     host: '0.0.0.0',  // 监听所有网络接口
+    allowedHosts: [
+      'test.furion-tech.com',
+      'localhost',
+      '.furion-tech.com',  // 允许所有 furion-tech.com 的子域名
+    ],
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'https://test.furion-tech.com:82',
         changeOrigin: true,
       },
       '/pg': {
-        target: 'http://localhost:3000',
+        target: 'https://test.furion-tech.com:82',
         changeOrigin: true,
       },
     },

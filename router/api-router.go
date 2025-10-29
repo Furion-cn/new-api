@@ -190,3 +190,14 @@ func SetApiRouter(router *gin.Engine) {
 		}
 	}
 }
+
+// SetGrafanaRouter 设置Grafana代理路由（独立路由组，跳过所有鉴权）
+func SetGrafanaRouter(router *gin.Engine) {
+	// 创建独立的Grafana路由组，不继承apiRouter的中间件
+	grafanaRoute := router.Group("/api/grafana")
+	grafanaRoute.Use(middleware.CORS()) // 添加CORS支持
+	// 匹配根路径 /api/grafana
+	grafanaRoute.Any("", controller.GrafanaProxy)
+	// 匹配所有子路径 /api/grafana/*
+	grafanaRoute.Any("/*path", controller.GrafanaProxy)
+}

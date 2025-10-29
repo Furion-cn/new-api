@@ -37,6 +37,7 @@ import Examples from './pages/Examples';
 const Home = lazy(() => import('./pages/Home'));
 const Detail = lazy(() => import('./pages/Detail'));
 const About = lazy(() => import('./pages/About'));
+const Grafana = lazy(() => import('./pages/Grafana'));
 
 function App() {
   return (
@@ -268,6 +269,16 @@ function App() {
             <Suspense fallback={<Loading></Loading>}>
               <Examples />
             </Suspense>
+          }
+        />
+        <Route
+          path='/grafana/*'
+          element={
+            <PrivateRoute>
+              <Suspense fallback={<Loading></Loading>}>
+                <Grafana />
+              </Suspense>
+            </PrivateRoute>
           }
         />
         <Route
