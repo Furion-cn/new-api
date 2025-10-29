@@ -37,6 +37,7 @@ const EditToken = (props) => {
     model_limits: [],
     allow_ips: '',
     group: '',
+    model_name_mapping: '',
   };
   const [inputs, setInputs] = useState(originInputs);
   const {
@@ -47,7 +48,8 @@ const EditToken = (props) => {
     model_limits_enabled,
     model_limits,
     allow_ips,
-    group
+    group,
+    model_name_mapping
   } = inputs;
   // const [visible, setVisible] = useState(false);
   const [models, setModels] = useState([]);
@@ -57,6 +59,22 @@ const EditToken = (props) => {
 
   const handleInputChange = (name, value) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
+  };
+
+  // 验证JSON格式
+  const validateJsonFormat = (jsonString) => {
+    if (!jsonString.trim()) {
+      return { valid: true, error: null };
+    }
+    try {
+      const parsed = JSON.parse(jsonString);
+      if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return { valid: false, error: 'JSON格式错误：必须是对象格式' };
+      }
+      return { valid: true, error: null };
+    } catch (error) {
+      return { valid: false, error: `JSON格式错误：${error.message}` };
+    }
   };
   const handleCancel = () => {
     props.handleClose();
@@ -153,6 +171,8 @@ const EditToken = (props) => {
 
   // 新增 state 变量 tokenCount 来记录用户想要创建的令牌数量，默认为 1
   const [tokenCount, setTokenCount] = useState(1);
+  // JSON验证错误状态
+  const [jsonError, setJsonError] = useState(null);
 
   // 新增处理 tokenCount 变化的函数
   const handleTokenCountChange = (value) => {
@@ -161,6 +181,13 @@ const EditToken = (props) => {
     if (!isNaN(count) && count > 0) {
       setTokenCount(count);
     }
+  };
+
+  // 处理模型名映射输入变化
+  const handleModelNameMappingChange = (value) => {
+    setInputs((inputs) => ({ ...inputs, model_name_mapping: value }));
+    const validation = validateJsonFormat(value);
+    setJsonError(validation.valid ? null : validation.error);
   };
 
   // 生成一个随机的四位字母数字字符串
@@ -178,6 +205,17 @@ const EditToken = (props) => {
 
   const submit = async () => {
     setLoading(true);
+    
+    // 验证模型名映射JSON格式
+    if (inputs.model_name_mapping) {
+      const validation = validateJsonFormat(inputs.model_name_mapping);
+      if (!validation.valid) {
+        showError(validation.error);
+        setLoading(false);
+        return;
+      }
+    }
+    
     if (isEdit) {
       // 编辑令牌的逻辑保持不变
       let localInputs = { ...inputs };
@@ -422,6 +460,22 @@ const EditToken = (props) => {
             }}
             value={inputs.allow_ips}
             style={{ fontFamily: 'JetBrains Mono, Consolas' }}
+          />
+          <div style={{ marginTop: 20 }}>
+            <Typography.Text>{t('模型名映射（JSON格式）')}</Typography.Text>
+          </div>
+          <TextArea
+            label={t('模型名映射')}
+            name='model_name_mapping'
+            placeholder={t('例如：{"gemini":"gemini-2.5","gpt-4":"gpt-4-turbo"}')}
+            onChange={(value) => {
+              handleModelNameMappingChange(value);
+            }}
+            value={inputs.model_name_mapping}
+            style={{ fontFamily: 'JetBrains Mono, Consolas' }}
+            rows={4}
+            validateStatus={jsonError ? 'error' : 'default'}
+            helpText={jsonError || t('用于将用户请求的模型名映射到实际使用的模型名，JSON格式')}
           />
           <div style={{ marginTop: 10, display: 'flex' }}>
             <Space>

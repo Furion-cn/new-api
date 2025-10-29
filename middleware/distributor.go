@@ -100,6 +100,17 @@ func Distribute() func(c *gin.Context) {
 				}
 			}
 
+			// 应用模型名映射
+			modelNameMapping := c.GetString("token_model_name_mapping")
+			if modelNameMapping != "" {
+				var mapping map[string]string
+				if err := json.Unmarshal([]byte(modelNameMapping), &mapping); err == nil {
+					if mappedModel, exists := mapping[modelRequest.Model]; exists {
+						modelRequest.Model = mappedModel
+					}
+				}
+			}
+
 			common.LogInfo(c, "userGroup: "+userGroup+" modelRequest.Model: "+modelRequest.Model)
 			if shouldSelectChannel {
 				channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, modelRequest.Model, 0)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"one-api/common"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -52,7 +53,8 @@ func abortWithOpenAiMessage(c *gin.Context, statusCode int, message string) {
 	}
 
 	// 将请求体转换为紧凑的JSON格式
-	requestStr := common.LogRequestBody(c)
+	truncateMod := os.Getenv("LOG_TRUNCATE_TYPE")
+	requestStr := common.LogRequestBody(c, truncateMod)
 
 	// 记录日志
 	common.LogError(c.Request.Context(), fmt.Sprintf("user %d | %s | request body: %s | response body: %s",

@@ -209,6 +209,10 @@ func migrateDB() error {
 	if err != nil {
 		return err
 	}
+	err = DB.AutoMigrate(&Limit{})
+	if err != nil {
+		return err
+	}
 	err = DB.AutoMigrate(&Token{})
 	if err != nil {
 		return err

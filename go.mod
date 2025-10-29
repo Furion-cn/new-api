@@ -41,6 +41,7 @@ require (
 
 require (
 	github.com/Furion-cn/tunnel_api v0.0.0-20251018130053-e43d444adaed
+	github.com/stretchr/testify v1.10.0
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.70
 )
 
@@ -52,6 +53,7 @@ require (
 	github.com/anthropics/anthropic-sdk-go v1.12.0 // indirect
 	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/cloudwego/hertz v0.10.1 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
@@ -61,6 +63,7 @@ require (
 	github.com/openai/openai-go v1.12.0 // indirect
 	github.com/openai/openai-go/v2 v2.7.1 // indirect
 	github.com/philchia/agollo/v4 v4.1.5 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
