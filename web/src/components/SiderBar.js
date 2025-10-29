@@ -66,6 +66,7 @@ const SiderBar = () => {
     task: '/task',
     playground: '/playground',
     personal: '/personal',
+    grafana: '/grafana',
   };
 
   const workspaceItems = useMemo(
@@ -111,6 +112,12 @@ const SiderBar = () => {
           localStorage.getItem('enable_task') === 'true'
             ? ''
             : 'tableHiddle',
+      },
+      {
+        text: t('监控面板'),
+        itemKey: 'grafana',
+        to: '/grafana',
+        icon: <IconCalendarClock />,
       }
     ],
     [
