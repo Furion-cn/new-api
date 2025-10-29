@@ -467,7 +467,7 @@ const EditToken = (props) => {
           <TextArea
             label={t('模型名映射')}
             name='model_name_mapping'
-            placeholder={t('例如：{"gemini":"gemini-2.5","gpt-4":"gpt-4-turbo"}')}
+            placeholder={t('请输入JSON映射，例如见下方示例')}
             onChange={(value) => {
               handleModelNameMappingChange(value);
             }}
@@ -475,8 +475,18 @@ const EditToken = (props) => {
             style={{ fontFamily: 'JetBrains Mono, Consolas' }}
             rows={4}
             validateStatus={jsonError ? 'error' : 'default'}
-            helpText={jsonError || t('用于将用户请求的模型名映射到实际使用的模型名，JSON格式')}
           />
+          {/* 显示校验错误或示例说明 */}
+          <div style={{ marginTop: 6 }}>
+            {jsonError ? (
+              <Typography.Text type='danger'>{jsonError}</Typography.Text>
+            ) : (
+              <Typography.Text type='tertiary'>
+                {t('用于将用户请求的模型名映射到实际使用的模型名，JSON格式。示例：')}
+                {` {"gemini-2.5-pro":"gemini-2.5-pro-youtube"}`}
+              </Typography.Text>
+            )}
+          </div>
           <div style={{ marginTop: 10, display: 'flex' }}>
             <Space>
               <Checkbox
