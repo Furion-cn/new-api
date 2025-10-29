@@ -79,10 +79,10 @@ func SetRelayRouter(router *gin.Engine) {
 	// Google Gemini v1beta API routes
 	relayV1BetaRouter := router.Group("/v1beta")
 	relayV1BetaRouter.Use(middleware.TokenAuth())
-	relayV1BetaRouter.Use(middleware.ModelRequestRateLimit(), middleware.UserTokenModelRateLimit())
+	relayV1BetaRouter.Use(middleware.ModelRequestRateLimit())
 	{
 		v1betaHttpRouter := relayV1BetaRouter.Group("")
-		v1betaHttpRouter.Use(middleware.Distribute())
+		v1betaHttpRouter.Use(middleware.Distribute(), middleware.UserTokenModelRateLimit())
 
 		v1betaHttpRouter.POST("/models/*modelAndAction", controller.Relay)
 	}
