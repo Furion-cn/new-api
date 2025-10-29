@@ -4,7 +4,8 @@
 
 **原则上建议直接使用官方SDK改环境变量访问或者直接使用官方的REST风格的请求BODY构造HTTP请求访问。另外如碰到一些特殊的参数支持情况，可能会需要按照本站风格调用，请参阅下方特殊情况部分**
 
-使用OpenAI SDK的协议调用本站，可能出现参数不支持的，或者格式不支持的情况，内部会进行适配。使用时需要自行打一定流量来检测使用效果是否符合预期。
+使用OpenAI SDK的协议调用本站的非OpenAI模型，可能出现参数不支持的情况，或者格式不支持的情况，内部会进行适配。使用时需要自行打一定流量来检测使用效果是否符合预期。
+因为从OpenAI格式到其他格式诸如Gemini会有参数转换，如果需要使用OpenAI的格式调多种模型，可参考开源文档https://docs.newapi.pro/api/
 
 ## 服务架构和调度策略
 
@@ -15,32 +16,16 @@
 - 调用时会优先使用Azure渠道，Azure不可用时自动切换到OpenAI官方
 
 ### 各厂商调度优先级
-- **Gemini**: Vertex → GCP
+- **Gemini**: Vertex → GCP 
 - **GPT**: Azure → OpenAI
 - **Claude**: AWS → Anthropic  
 - **Doubao**: 火山方舟
 
-### 指定调度渠道
-模型名请使用官方的模型名
-如需指定特定的调度渠道，可在请求头中携带 `X-Channel-Type` 参数：
-
-**示例**：
-```
-X-Channel-Type: google
-```
-
-**支持的渠道类型**：
-- `google` - 指定使用Google渠道
-- `openai` - 指定使用OpenAI渠道  
-- `azure` - 指定使用Azure渠道
-- `anthropic` - 指定使用Anthropic渠道
-- `aws` - 指定使用AWS渠道
-- `doubao` - 指定使用豆包渠道
-
+  
 ### 注意事项
 
 #### 1. 第三方渠道模型参数限制
-各第三方渠道（Azure、Vertex、AWS等）的部分模型参数可能不支持，遇到此类情况：
+各非直接官方渠道（Azure、Vertex、AWS等）的部分模型参数可能不支持官方的部分参数【claude、openai、google gemini】，遇到此类情况：
 - 建议使用前进行小量测试和效果验证，确保参数支持
 - 如有确实效果问题，必须优先调度官方，可联系支持
 
@@ -54,16 +39,16 @@ X-Channel-Type: google
 
 **建议**：如需调用特定版本，请使用带明确版本号的模型名。
 
-
 ## 超时时间设置
-
 统一使用30分钟作为超时时间设置。
 
 ## 可用性和重试
-
+### 服务端重试和限流建议
+服务端本身会hold客户端打过来的请求链接，默认情况下无限流，如果碰到我们后端容量不充足的模型，例如gemini-2.5-pro之类的，会对对应客户的模型进行限流，此时会根据后端容量的情况动态调整限流阈值，此时客户端表现为请求整体返回耗时上涨，客户端实际成功RPM维持在稳定值。
+如有扩容需求，请联系支持。
+### 客户端重试建议
 由于各家官方可能会不定期封禁号源，因此可用性在官方封禁期间会有一些影响，可能是抖动或者彻底不可用。
-
-建议的重试时间间隔和次数可以相对设多一些，比如10分钟重试一次，重试10次，这样整体的兜底时间差不多2小时，一般常规封号情况都会在这个时间内解决。
+建议的重试时间间隔和次数可以相对设多一些，比如10分钟重试一次，总计重试10次，这样整体的兜底时间差不多2小时，一般常规封号情况都会在这个时间内解决。
 非常规情况请联系支持。
 
 ## 各个厂商官方SDK使用办法
@@ -95,40 +80,44 @@ os.environ['GOOGLE_GEMINI_BASE_URL'] = "https://www.furion-tech.com/"
 client = genai.Client()
 ```
 
-## 特殊情况 
-Gemini 2.5 Pro YouTube 视频处理
+## 特殊情况  用Gemini 2.5 Pro YouTube URL 视频链接做视频理解
+### 特定调用令牌
+在API令牌管理页创建令牌，单独用于只调用能传YouTube视频URL的gemini-2.5-pro, 在模型名映射（JSON格式）配置下面的模型名映射，以便流量打到支持视频URL的gcp的号上
 
-`gemini-2.5-pro` 模型在处理 YouTube 视频时需要特殊的调用格式支持。请使用以下请求格式：
+![API令牌创建示例](/docs/using/api_create.png)
 
 ```json
-{
-  "messages": [
-    {
-      "content": [
-        {
-          "type": "text",
-          "text": "描述这个视频的内容，并告诉我视频时长有多长"
-        },
-        {
-          "type": "youtube",
-          "mimetype": "video/webm",
-          "url": "https://www.youtube.com/watch?v=fXvqoWlLU1c"
-        }
-      ],
-      "role": "user"
-    }
-  ],
-  "video_metadata": {
-    "fps": 1,
-    "start_offset": "0s",
-    "end_offset": "10s"
-  },
-  "model": "gemini-2.5-pro-google"
-}
+{"gemini-2.5-pro":"gemini-2.5-pro-youtube"}
 ```
 
-**注意事项**：
-- 必须使用 `gemini-2.5-pro-google` 作为模型名
-- YouTube URL 需要包含完整的 watch 链接
-- `video_metadata` 参数用于控制视频处理的帧率和时间范围
-- `start_offset` 和 `end_offset` 用于指定处理视频的起止时间
+### gemini-2.5-pro参数支持
+`gemini-2.5-pro` 模型在处理 YouTube 视频时需要支持的额外参数，如有不支持的参数请联系支持，请使用以下请求格式：
+
+```python
+from google import genai
+from google.genai import types
+import json,os
+
+os.environ['GOOGLE_API_KEY'] =  "sk-XXXXXXXXXX"
+os.environ['GOOGLE_GEMINI_BASE_URL'] = "https://www.furion-tech.com/"
+
+client = genai.Client( )
+response = client.models.generate_content(
+    model='models/gemini-2.5-pro',
+    contents=types.Content(
+        parts=[
+            types.Part(
+                file_data=types.FileData(file_uri='https://www.youtube.com/watch?v=Oy-GxFRzCDo'),
+                video_metadata=types.VideoMetadata(fps=1,start_offset='0s',end_offset='3s')
+            ),
+            types.Part(text=
+            """这个视频有多长，讲了什么内容"""
+            )
+        ]
+    ),
+    config=types.GenerateContentConfig(
+         media_resolution=types.MediaResolution.MEDIA_RESOLUTION_HIGH  
+    )
+)
+print(json.dumps(response, default=str, ensure_ascii=False, indent=2))
+```
