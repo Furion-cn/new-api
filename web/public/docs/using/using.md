@@ -121,3 +121,33 @@ response = client.models.generate_content(
 )
 print(json.dumps(response, default=str, ensure_ascii=False, indent=2))
 ```
+### gemini 最新版本的思考总结参数兼容
+官方最新的python版本生成的http body的思考字段使用的是include_thoughts，go 语言的最新版本是includeThoughts，由于本站是GO写的，
+因此会有参数未对齐导致的思考参数未生效，以下提供直接通过extra_body的方式来兼容调用
+```python
+from google import genai
+from google.genai import types
+import os,json
+os.environ['GOOGLE_API_KEY'] = "sk-xxxxxxxxxxxx"
+os.environ['GOOGLE_GEMINI_BASE_URL'] = "https://www.furion-tech.com/"
+client = genai.Client()
+prompt = "What is the sum of the first 50 prime numbers?"
+response = client.models.generate_content(
+  model="gemini-2.5-pro",
+  contents=prompt,
+  config=types.GenerateContentConfig(
+    http_options=types.HttpOptions(
+      extra_body={
+        "generationConfig": {
+          "thinkingConfig": {
+            "includeThoughts": True
+          }
+        }
+      }
+    )
+  )
+)
+# 直接转换为字典并打印JSON
+response_dict = response.__dict__ if hasattr(response, '__dict__') else str(response)
+print(json.dumps(response_dict, default=str, ensure_ascii=False, indent=2))
+```
