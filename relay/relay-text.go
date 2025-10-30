@@ -606,6 +606,7 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,
 	}
 
 	// Record token metrics
+	metrics.IncrementInputTokens(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, modelName, relayInfo.Group, strconv.Itoa(relayInfo.UserId), userName, tokenName, float64(promptTokens))
 	metrics.IncrementOutputTokens(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, modelName, relayInfo.Group, strconv.Itoa(relayInfo.UserId), userName, tokenName, float64(completionTokens))
 
 	if cacheTokens > 0 {
