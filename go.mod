@@ -40,7 +40,7 @@ require (
 )
 
 require (
-	github.com/Furion-cn/tunnel_api v0.0.0-20251018130053-e43d444adaed
+	github.com/Furion-cn/tunnel_api v0.0.0-20251020055313-0bbb4d8874ce
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.70
 )
 
