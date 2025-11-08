@@ -70,4 +70,8 @@ func LoadEnv() {
 	// Initialize mock response feature
 	MockResponseEnabled = os.Getenv("MOCK_RESPONSE_ENABLED") == "true"
 	SysLog(fmt.Sprintf("MockResponseEnabled: %v", MockResponseEnabled))
+
+	// Initialize mock response delay
+	MockResponseDelay = GetEnvOrDefault("MOCK_RESPONSE_DELAY", 1)
+	SysLog(fmt.Sprintf("MockResponseDelay: %d seconds", MockResponseDelay))
 }
