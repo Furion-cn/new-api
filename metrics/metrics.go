@@ -61,7 +61,7 @@ var (
 			Subsystem: Namespace,
 			Name:      "relay_request_failed",
 			Help:      "Total number of relay request failed",
-		}, []string{"channel", "channel_name", "tag", "base_url", "model", "group", "code", "user_id", "user_name"})
+		}, []string{"channel", "channel_name", "tag", "base_url", "model", "group", "code", "user_id", "user_name", "error_message"})
 	relayRequestRetryCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Subsystem: Namespace,
@@ -94,7 +94,7 @@ var (
 			Subsystem: Namespace,
 			Name:      "relay_request_e2e_failed",
 			Help:      "Total number of relay request e2e failed",
-		}, []string{"channel", "channel_name", "model", "group", "code", "token_key", "token_name", "user_id", "user_name"})
+		}, []string{"channel", "channel_name", "model", "group", "code", "token_key", "token_name", "user_id", "user_name", "error_message"})
 	relayRequestE2EDurationObsever = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Subsystem: Namespace,
