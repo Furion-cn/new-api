@@ -93,7 +93,7 @@ func ImageHelper(c *gin.Context, relayInfo *relaycommon.RelayInfo, imageRequest 
 	metrics.IncrementRelayRequestTotalCounter(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, imageRequest.Model, relayInfo.Group, strconv.Itoa(relayInfo.UserId), relayInfo.UserName, 1)
 	defer func() {
 		if funcErr != nil {
-			metrics.IncrementRelayRequestFailedCounter(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, imageRequest.Model, relayInfo.Group, strconv.Itoa(funcErr.StatusCode), strconv.Itoa(relayInfo.UserId), relayInfo.UserName, 1)
+			metrics.IncrementRelayRequestFailedCounter(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, imageRequest.Model, relayInfo.Group, strconv.Itoa(funcErr.StatusCode), strconv.Itoa(relayInfo.UserId), relayInfo.UserName, funcErr.Error.Message, 1)
 		} else {
 			metrics.IncrementRelayRequestSuccessCounter(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, imageRequest.Model, relayInfo.Group, strconv.Itoa(statusCode), strconv.Itoa(relayInfo.UserId), relayInfo.UserName, 1)
 			metrics.ObserveRelayRequestDuration(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, imageRequest.Model, relayInfo.Group, strconv.Itoa(relayInfo.UserId), relayInfo.UserName, time.Since(startTime).Seconds())

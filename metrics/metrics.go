@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"strings"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -207,8 +209,9 @@ func IncrementRelayRequestSuccessCounter(channel, channelName, tag, baseURL, mod
 	relayRequestSuccessCounter.WithLabelValues(channel, channelName, tag, baseURL, model, group, statusCode, userId, userName).Add(add)
 }
 
-func IncrementRelayRequestFailedCounter(channel, channelName, tag, baseURL, model, group, code, userId, userName string, add float64) {
-	relayRequestFailedCounter.WithLabelValues(channel, channelName, tag, baseURL, model, group, code, userId, userName).Add(add)
+func IncrementRelayRequestFailedCounter(channel, channelName, tag, baseURL, model, group, code, userId, userName, errorMessage string, add float64) {
+	errorMessage = errorMessageToCode(errorMessage)
+	relayRequestFailedCounter.WithLabelValues(channel, channelName, tag, baseURL, model, group, code, userId, userName, errorMessage).Add(add)
 }
 
 func IncrementRelayRetryCounter(channel, channelName, tag, baseURL, model, group, userId, userName string, add float64) {
@@ -227,8 +230,9 @@ func IncrementRelayRequestE2ESuccessCounter(channel, channelName, model, group, 
 	relayRequestE2ESuccessCounter.WithLabelValues(channel, channelName, model, group, tokenKey, tokenName, userId, userName).Add(add)
 }
 
-func IncrementRelayRequestE2EFailedCounter(channel, channelName, model, group, code, tokenKey, tokenName, userId, userName string, add float64) {
-	relayRequestE2EFailedCounter.WithLabelValues(channel, channelName, model, group, code, tokenKey, tokenName, userId, userName).Add(add)
+func IncrementRelayRequestE2EFailedCounter(channel, channelName, model, group, code, tokenKey, tokenName, userId, userName, errorMessage string, add float64) {
+	errorMessage = errorMessageToCode(errorMessage)
+	relayRequestE2EFailedCounter.WithLabelValues(channel, channelName, model, group, code, tokenKey, tokenName, userId, userName, errorMessage).Add(add)
 }
 
 func ObserveRelayRequestE2EDuration(channel, channelName, model, group, tokenKey, tokenName, userId, userName string, duration float64) {
@@ -290,4 +294,36 @@ func IncrementConsumeLogTrafficFailed(channel, channelName, model, group, userId
 
 func IncrementConsumeLogTrafficSuccess(channel, channelName, model, group, userId, userName, tokenName string, add float64) {
 	consumeLogTrafficSuccessCounter.WithLabelValues(channel, channelName, model, group, userId, userName, tokenName).Add(add)
+}
+
+func errorMessageToCode(errorMessage string) string {
+	switch {
+	case errorMessage == "":
+		errorMessage = "none"
+	case strings.Contains(errorMessage, "write: connection timed out"):
+		errorMessage = "connection_timeout"
+	case strings.Contains(errorMessage, "do request failed"):
+		errorMessage = "do_request_failed"
+	case strings.Contains(errorMessage, "no candidates returned"):
+		errorMessage = "no_candidates_returned"
+	case strings.Contains(errorMessage, "has been suspended"):
+		errorMessage = "key_suspended"
+	case strings.Contains(errorMessage, "The caller does not have permission"):
+		errorMessage = "caller_permission_denied"
+	case strings.Contains(errorMessage, "Quota exceeded for metric"):
+		errorMessage = "quota_exceeded"
+	case strings.Contains(errorMessage, "Resource has been exhausted"):
+		errorMessage = "resource_exhausted"
+	case strings.Contains(errorMessage, "The model is overloaded"):
+		errorMessage = "model_overloaded"
+	case strings.Contains(errorMessage, "bad_response_status_code"):
+		errorMessage = "bad_response_status_code"
+	case strings.Contains(errorMessage, "当前分组上游负载已饱和"):
+		errorMessage = "ups_overload"
+	case strings.Contains(errorMessage, "An internal error has occurred"):
+		errorMessage = "internal_error_google"
+	default:
+		errorMessage = "unknown"
+	}
+	return errorMessage
 }
