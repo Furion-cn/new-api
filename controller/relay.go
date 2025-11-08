@@ -144,7 +144,7 @@ func Relay(c *gin.Context) {
 			code = "499"
 		}
 		common.LogInfo(c, fmt.Sprintf("id %s channel: %d,name %s, requestModel: %s, group: %s, tokenKey: %s, tokenName: %s, userId: %s, userName: %s", requestId, channel.Id, channel.Name, requestModel, group, tokenKey, tokenName, userId, userName))
-		metrics.IncrementRelayRequestE2EFailedCounter(strconv.Itoa(channel.Id), channel.Name, requestModel, group, code, tokenKey, tokenName, userId, userName, 1)
+		metrics.IncrementRelayRequestE2EFailedCounter(strconv.Itoa(channel.Id), channel.Name, requestModel, group, code, tokenKey, tokenName, userId, userName, openaiErr.Error.Message, 1)
 	}()
 
 	for i := 0; i <= common.RetryTimes; i++ {
@@ -207,7 +207,7 @@ func Relay(c *gin.Context) {
 				return
 			}
 			if strings.Contains(openaiErr.Error.Message, "No candidates returned") && originalModel == "gemini-2.5-pro" {
-				originalModel = "gemini-2.5-pro-google"
+				originalModel = "gemini-2.5-pro-youtube"
 			}
 		}
 
@@ -320,7 +320,7 @@ func WssRelay(c *gin.Context) {
 		if !shouldRetry(c, openaiErr, common.RetryTimes-i) {
 			// e2e 失败计数
 			if channel != nil {
-				metrics.IncrementRelayRequestE2EFailedCounter(strconv.Itoa(channel.Id), channel.Name, originalModel, group, strconv.Itoa(openaiErr.StatusCode), tokenKey, tokenName, userId, userName, 1)
+				metrics.IncrementRelayRequestE2EFailedCounter(strconv.Itoa(channel.Id), channel.Name, originalModel, group, strconv.Itoa(openaiErr.StatusCode), tokenKey, tokenName, userId, userName, openaiErr.Error.Message, 1)
 			}
 			break
 		}

@@ -42,7 +42,7 @@ func ProxyHelper(c *gin.Context, relayInfo *relaycommon.RelayInfo, proxyRequest 
 			err = fmt.Errorf(funcErr.Error.Message)
 		}
 		if err != nil {
-			metrics.IncrementRelayRequestFailedCounter(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, relayInfo.OriginModelName, relayInfo.Group, strconv.Itoa(openaiErr.StatusCode), strconv.Itoa(relayInfo.UserId), relayInfo.UserName, 1)
+			metrics.IncrementRelayRequestFailedCounter(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, relayInfo.OriginModelName, relayInfo.Group, strconv.Itoa(openaiErr.StatusCode), strconv.Itoa(relayInfo.UserId), relayInfo.UserName, funcErr.Error.Message, 1)
 		} else {
 			metrics.IncrementRelayRequestSuccessCounter(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, relayInfo.OriginModelName, relayInfo.Group, strconv.Itoa(statusCode), strconv.Itoa(relayInfo.UserId), relayInfo.UserName, 1)
 			metrics.ObserveRelayRequestDuration(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, relayInfo.OriginModelName, relayInfo.Group, strconv.Itoa(relayInfo.UserId), relayInfo.UserName, time.Since(startTime).Seconds())
