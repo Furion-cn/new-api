@@ -102,7 +102,7 @@ var (
 			Help:      "Duration of relay request e2e",
 			Buckets:   prometheus.ExponentialBuckets(1, 2, 12),
 		},
-		[]string{"channel", "channel_name", "model", "group", "token_key", "token_name", "user_id", "user_name"},
+		[]string{"channel", "channel_name", "model", "group", "token_key", "token_name", "user_id", "user_name", "code"},
 	)
 	// Batch request metrics
 	batchRequestCounter = prometheus.NewCounterVec(
@@ -235,8 +235,8 @@ func IncrementRelayRequestE2EFailedCounter(channel, channelName, model, group, c
 	relayRequestE2EFailedCounter.WithLabelValues(channel, channelName, model, group, code, tokenKey, tokenName, userId, userName, errorMessage).Add(add)
 }
 
-func ObserveRelayRequestE2EDuration(channel, channelName, model, group, tokenKey, tokenName, userId, userName string, duration float64) {
-	relayRequestE2EDurationObsever.WithLabelValues(channel, channelName, model, group, tokenKey, tokenName, userId, userName).Observe(duration)
+func ObserveRelayRequestE2EDuration(channel, channelName, model, group, tokenKey, tokenName, userId, userName, code string, duration float64) {
+	relayRequestE2EDurationObsever.WithLabelValues(channel, channelName, model, group, tokenKey, tokenName, userId, userName, code).Observe(duration)
 }
 
 // Batch request metrics functions
@@ -297,12 +297,7 @@ func IncrementConsumeLogTrafficSuccess(channel, channelName, model, group, userI
 }
 
 /*
-cat oneapi-20251110231556.log | grep '\[ERR' | grep -v -E 'write: connection timed out|do request failed|no candidates returned|has been suspended|The caller does not have
-permission|Quota exceeded for metric|Resource has been exhausted|The model is overloaded|bad_response_status_code|当前分组上游负载已饱和|An internal error has occurred|have exceeded the
-call rate limit for your current AIServices S0 pricing tier|upstream error with status 408|failed to get model resp|The operation was timeout|exceeded for UserConcurrentRequests. Pleas
-e wait|API Key not found|context deadline exceeded (Client.Timeout exceeded while awaiting headers)|无可用渠道（distributor）|API key expired. Please renew the API key.|API key not vali
-d. Please pass a valid API key.|该令牌状态不可用|write: broken pipe|Internal error encountered|Quota exceeded for quota metric |Client.Timeout exceeded while awaiting headers|Your API k
-ey was reported as leaked. Please use another API key.'
+cat oneapi-20251111004134.log | grep '\[ERR' | grep -v -E 'write: connection timed out|The caller does not have permission|do request failed|no candidates returned|has been suspended|The caller does not havepermission|Quota exceeded for metric|Resource has been exhausted|The model is overloaded|bad_response_status_code|当前分组上游负载已饱和|An internal error has occurred|have exceeded thecall rate limit for your current AIServices S0 pricing tier|upstream error with status 408|failed to get model resp|The operation was timeout|exceeded for UserConcurrentRequests. Please wait|API Key not found|context deadline exceeded (Client.Timeout exceeded while awaiting headers)|无可用渠道（distributor）|API key expired. Please renew the API key.|API key not valid. Please pass a valid API key.|该令牌状态不可用|write: broken pipe|Internal error encountered|Quota exceeded for quota metric |Client.Timeout exceeded while awaiting headers|Your API key was reported as leaked. Please use another API key.'
 */
 func errorMessageToCode(errorMessage string) string {
 	switch {
