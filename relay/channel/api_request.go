@@ -182,7 +182,14 @@ func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http
 	var response *http.Response
 
 	if onecommon.MockResponseEnabled && c.GetHeader("X-Test-Traffic") == "true" {
-		time.Sleep(time.Duration(onecommon.MockResponseDelay) * time.Second)
+		// 优先使用 header 中的 MOCK_RESPONSE_DELAY，如果没有则使用默认值
+		delay := onecommon.MockResponseDelay
+		if delayHeader := c.GetHeader("MOCK_RESPONSE_DELAY"); delayHeader != "" {
+			if parsedDelay, err := strconv.Atoi(delayHeader); err == nil && parsedDelay >= 0 {
+				delay = parsedDelay
+			}
+		}
+		time.Sleep(time.Duration(delay) * time.Second)
 
 		var responseBody string
 		if strings.Contains(strings.ToLower(info.UpstreamModelName), "gemini") {
