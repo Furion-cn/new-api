@@ -129,22 +129,28 @@ func Relay(c *gin.Context) {
 	var channel *model.Channel
 	var requestModel string
 	defer func() {
-		if openaiErr == nil {
-			return
-		}
 		if channel == nil {
 			channel = &model.Channel{
 				Id:   -1,
 				Name: "nofallback",
 			}
 		}
-		code := strconv.Itoa(openaiErr.StatusCode)
-		// e2e 失败计数
-		if strings.Contains(openaiErr.Error.Message, "write: connection timed out") && openaiErr.Error.Code == "copy_response_body_failed" {
-			code = "499"
+		var code string
+		if openaiErr == nil {
+			// 成功请求
+			code = "200"
+		} else {
+			// 失败请求
+			code = strconv.Itoa(openaiErr.StatusCode)
+			// e2e 失败计数
+			if strings.Contains(openaiErr.Error.Message, "write: connection timed out") && openaiErr.Error.Code == "copy_response_body_failed" {
+				code = "499"
+			}
+			common.LogInfo(c, fmt.Sprintf("id %s channel: %d,name %s, requestModel: %s, group: %s, tokenKey: %s, tokenName: %s, userId: %s, userName: %s", requestId, channel.Id, channel.Name, requestModel, group, tokenKey, tokenName, userId, userName))
+			metrics.IncrementRelayRequestE2EFailedCounter(strconv.Itoa(channel.Id), channel.Name, requestModel, group, code, tokenKey, tokenName, userId, userName, openaiErr.Error.Message, 1)
 		}
-		common.LogInfo(c, fmt.Sprintf("id %s channel: %d,name %s, requestModel: %s, group: %s, tokenKey: %s, tokenName: %s, userId: %s, userName: %s", requestId, channel.Id, channel.Name, requestModel, group, tokenKey, tokenName, userId, userName))
-		metrics.IncrementRelayRequestE2EFailedCounter(strconv.Itoa(channel.Id), channel.Name, requestModel, group, code, tokenKey, tokenName, userId, userName, openaiErr.Error.Message, 1)
+		// 统计所有请求的耗时（成功和失败）
+		metrics.ObserveRelayRequestE2EDuration(strconv.Itoa(channel.Id), channel.Name, requestModel, group, tokenKey, tokenName, userId, userName, code, time.Since(startTime).Seconds())
 	}()
 
 	for i := 0; i <= common.RetryTimes; i++ {
@@ -203,7 +209,6 @@ func Relay(c *gin.Context) {
 			if openaiErr == nil {
 				common.LogInfo(c, fmt.Sprintf("channel: %d,name %s, requestModel: %s, group: %s, tokenKey: %s, tokenName: %s, userId: %s, userName: %s", channel.Id, channel.Name, requestModel, group, tokenKey, tokenName, userId, userName))
 				metrics.IncrementRelayRequestE2ESuccessCounter(strconv.Itoa(channel.Id), channel.Name, requestModel, group, tokenKey, tokenName, userId, userName, 1)
-				metrics.ObserveRelayRequestE2EDuration(strconv.Itoa(channel.Id), channel.Name, requestModel, group, tokenKey, tokenName, userId, userName, time.Since(startTime).Seconds())
 				return
 			}
 			if strings.Contains(openaiErr.Error.Message, "No candidates returned") && originalModel == "gemini-2.5-pro" {
@@ -293,9 +298,31 @@ func WssRelay(c *gin.Context) {
 	userId := c.GetString("user_id")
 	userName := c.GetString("user_name")
 	var openaiErr *dto.OpenAIErrorWithStatusCode
+	var channel *model.Channel
+	defer func() {
+		if channel == nil {
+			channel = &model.Channel{
+				Id:   -1,
+				Name: "nofallback",
+			}
+		}
+		var code string
+		if openaiErr == nil {
+			// 成功请求
+			code = "200"
+		} else {
+			// 失败请求
+			code = strconv.Itoa(openaiErr.StatusCode)
+			if strings.Contains(openaiErr.Error.Message, "write: connection timed out") && openaiErr.Error.Code == "copy_response_body_failed" {
+				code = "499"
+			}
+		}
+		// 统计所有请求的耗时（成功和失败）
+		metrics.ObserveRelayRequestE2EDuration(strconv.Itoa(channel.Id), channel.Name, originalModel, group, tokenKey, tokenName, userId, userName, code, time.Since(startTime).Seconds())
+	}()
 
 	for i := 0; i <= common.RetryTimes; i++ {
-		channel, err := getChannel(c, group, originalModel, i)
+		channel, err = getChannel(c, group, originalModel, i)
 		if err != nil {
 			common.LogError(c, err.Error())
 			openaiErr = service.OpenAIErrorWrapperLocal(err, "get_channel_failed", http.StatusInternalServerError)
@@ -311,17 +338,12 @@ func WssRelay(c *gin.Context) {
 
 		if openaiErr == nil {
 			metrics.IncrementRelayRequestE2ESuccessCounter(strconv.Itoa(channel.Id), channel.Name, originalModel, group, tokenKey, tokenName, userId, userName, 1)
-			metrics.ObserveRelayRequestE2EDuration(strconv.Itoa(channel.Id), channel.Name, originalModel, group, tokenKey, tokenName, userId, userName, time.Since(startTime).Seconds())
 			return // 成功处理请求，直接返回
 		}
 
 		go processChannelError(c, channel.Id, channel.Type, channel.Name, channel.GetAutoBan(), openaiErr)
 
 		if !shouldRetry(c, openaiErr, common.RetryTimes-i) {
-			// e2e 失败计数
-			if channel != nil {
-				metrics.IncrementRelayRequestE2EFailedCounter(strconv.Itoa(channel.Id), channel.Name, originalModel, group, strconv.Itoa(openaiErr.StatusCode), tokenKey, tokenName, userId, userName, openaiErr.Error.Message, 1)
-			}
 			break
 		}
 	}
@@ -359,6 +381,14 @@ func WssRelay(c *gin.Context) {
 		if openaiErr.StatusCode == dto.StatusRequestConflict {
 			common.LogError(c, fmt.Sprintf("origin %d error: %s", openaiErr.StatusCode, openaiErr.Error.Message))
 			openaiErr.Error.Message = "请求冲突，有其他请求使用了这个Retry_request_id，请稍后再试"
+		}
+		// e2e 失败计数
+		if channel != nil {
+			code := strconv.Itoa(openaiErr.StatusCode)
+			if strings.Contains(openaiErr.Error.Message, "write: connection timed out") && openaiErr.Error.Code == "copy_response_body_failed" {
+				code = "499"
+			}
+			metrics.IncrementRelayRequestE2EFailedCounter(strconv.Itoa(channel.Id), channel.Name, originalModel, group, code, tokenKey, tokenName, userId, userName, openaiErr.Error.Message, 1)
 		}
 		openaiErr.Error.Message = common.MessageWithRequestId(openaiErr.Error.Message, requestId)
 		helper.WssError(c, ws, openaiErr.Error)
