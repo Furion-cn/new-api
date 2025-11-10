@@ -296,6 +296,14 @@ func IncrementConsumeLogTrafficSuccess(channel, channelName, model, group, userI
 	consumeLogTrafficSuccessCounter.WithLabelValues(channel, channelName, model, group, userId, userName, tokenName).Add(add)
 }
 
+/*
+cat oneapi-20251110231556.log | grep '\[ERR' | grep -v -E 'write: connection timed out|do request failed|no candidates returned|has been suspended|The caller does not have
+permission|Quota exceeded for metric|Resource has been exhausted|The model is overloaded|bad_response_status_code|当前分组上游负载已饱和|An internal error has occurred|have exceeded the
+call rate limit for your current AIServices S0 pricing tier|upstream error with status 408|failed to get model resp|The operation was timeout|exceeded for UserConcurrentRequests. Pleas
+e wait|API Key not found|context deadline exceeded (Client.Timeout exceeded while awaiting headers)|无可用渠道（distributor）|API key expired. Please renew the API key.|API key not vali
+d. Please pass a valid API key.|该令牌状态不可用|write: broken pipe|Internal error encountered|Quota exceeded for quota metric |Client.Timeout exceeded while awaiting headers|Your API k
+ey was reported as leaked. Please use another API key.'
+*/
 func errorMessageToCode(errorMessage string) string {
 	switch {
 	case errorMessage == "":
@@ -322,6 +330,42 @@ func errorMessageToCode(errorMessage string) string {
 		errorMessage = "ups_overload"
 	case strings.Contains(errorMessage, "An internal error has occurred"):
 		errorMessage = "internal_error_google"
+	case strings.Contains(errorMessage, "have exceeded the call rate limit for your current AIServices S0 pricing tier"):
+		errorMessage = "rate_limit_exceeded_azure"
+	case strings.Contains(errorMessage, "upstream error with status 408"):
+		errorMessage = "upstream_timeout_408"
+	case strings.Contains(errorMessage, "failed to get model resp"):
+		errorMessage = "failed_to_get_model_resp"
+	case strings.Contains(errorMessage, "The operation was timeout"):
+		errorMessage = "operation_timeout"
+	case strings.Contains(errorMessage, "exceeded for UserConcurrentRequests. Please wait"):
+		errorMessage = "user_concurrent_requests_exceeded"
+	case strings.Contains(errorMessage, "API Key not found"):
+		errorMessage = "api_key_not_found"
+	case strings.Contains(errorMessage, "context deadline exceeded (Client.Timeout exceeded while awaiting headers"):
+		errorMessage = "context_deadline_exceeded_while_awaiting_headers"
+	case strings.Contains(errorMessage, "无可用渠道（distributor）"):
+		errorMessage = "no_available_channel"
+	case strings.Contains(errorMessage, "API key expired. Please renew the API key."):
+		errorMessage = "api_key_expired"
+	case strings.Contains(errorMessage, "bad_response_status_code"):
+		errorMessage = "bad_response_status_code"
+	case strings.Contains(errorMessage, "当前分组上游负载已饱和"):
+		errorMessage = "ups_overload"
+	case strings.Contains(errorMessage, "An internal error has occurred"):
+		errorMessage = "internal_error_google"
+	case strings.Contains(errorMessage, "API key not valid. Please pass a valid API key."):
+		errorMessage = "api_key_invalid"
+	case strings.Contains(errorMessage, "该令牌状态不可用"):
+		errorMessage = "token_disabled"
+	case strings.Contains(errorMessage, "write: broken pipe"):
+		errorMessage = "write_broken_pipe"
+	case strings.Contains(errorMessage, "Internal error encountered"):
+		errorMessage = "internal_error_encountered"
+	case strings.Contains(errorMessage, "Quota exceeded for quota metric 'Generate Content API requests per minute' and limit 'GenerateContent request limit per minute for a region' of service"):
+		errorMessage = "quota_exceeded_for_generate_content_api_requests_region"
+	case strings.Contains(errorMessage, "Your API key was reported as leaked. Please use another API key."):
+		errorMessage = "api_key_reported_as_leaked"
 	default:
 		errorMessage = "unknown"
 	}
