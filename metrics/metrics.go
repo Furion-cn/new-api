@@ -361,6 +361,8 @@ func errorMessageToCode(errorMessage string) string {
 		errorMessage = "quota_exceeded_for_generate_content_api_requests_region"
 	case strings.Contains(errorMessage, "Your API key was reported as leaked. Please use another API key."):
 		errorMessage = "api_key_reported_as_leaked"
+	case strings.Contains(errorMessage, "error response body is empty"):
+		errorMessage = "error_response_body_is_empty"
 	default:
 		errorMessage = "unknown"
 	}
