@@ -289,7 +289,11 @@ func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http
 	// 在doRequest函数中添加响应体日志
 	if resp.StatusCode != http.StatusOK {
 		responseBody, _ := io.ReadAll(resp.Body)
-		onecommon.LogError(ctx, fmt.Sprintf("error response body: %s", string(responseBody)))
+		if string(responseBody) != "" {
+			onecommon.LogError(ctx, fmt.Sprintf("error response body: %s", string(responseBody)))
+		} else {
+			onecommon.LogError(ctx, "error response body is empty")
+		}
 		resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
 
 		// 处理429状态码，根据环境变量配置延迟返回
