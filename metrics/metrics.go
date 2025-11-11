@@ -363,6 +363,14 @@ func errorMessageToCode(errorMessage string) string {
 		errorMessage = "api_key_reported_as_leaked"
 	case strings.Contains(errorMessage, "error response body is empty"):
 		errorMessage = "error_response_body_is_empty"
+	case strings.Contains(errorMessage, "无可用渠道"):
+		errorMessage = "no_available_channel"
+	case strings.Contains(errorMessage, "Client.Timeout or context cancellation while reading body"):
+		errorMessage = "client_timeout_or_context_cancellation_while_reading_body"
+	case strings.Contains(errorMessage, "failed to get request body"):
+		errorMessage = "failed_to_get_request_body"
+	case strings.Contains(errorMessage, "read: connection reset by peer, code is do_request_failed"):
+		errorMessage = "read_connection_reset_by_peer_do_request_failed"
 	default:
 		errorMessage = "unknown"
 	}
