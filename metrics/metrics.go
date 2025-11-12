@@ -297,7 +297,7 @@ func IncrementConsumeLogTrafficSuccess(channel, channelName, model, group, userI
 }
 
 /*
-cat oneapi-20251111004134.log | grep '\[ERR' | grep -v -E 'write: connection timed out|The caller does not have permission|do request failed|no candidates returned|has been suspended|The caller does not havepermission|Quota exceeded for metric|Resource has been exhausted|The model is overloaded|bad_response_status_code|当前分组上游负载已饱和|An internal error has occurred|have exceeded thecall rate limit for your current AIServices S0 pricing tier|upstream error with status 408|failed to get model resp|The operation was timeout|exceeded for UserConcurrentRequests. Please wait|API Key not found|context deadline exceeded (Client.Timeout exceeded while awaiting headers)|无可用渠道（distributor）|API key expired. Please renew the API key.|API key not valid. Please pass a valid API key.|该令牌状态不可用|write: broken pipe|Internal error encountered|Quota exceeded for quota metric |Client.Timeout exceeded while awaiting headers|Your API key was reported as leaked. Please use another API key.'
+cat  oneapi-20251112150853.log  | grep '\[ERR' | grep -v -E 'write: connection timed out|The caller does not have permission|do request failed|no candidates returned|has been suspended|The caller does not havepermission|Quota exceeded for metric|Resource has been exhausted|The model is overloaded|bad_response_status_code|当前分组上游负载已饱和|An internal error has occurred|have exceeded thecall rate limit for your current AIServices S0 pricing tier|upstream error with status 408|failed to get model resp|The operation was timeout|exceeded for UserConcurrentRequests. Please wait|API Key not found|context deadline exceeded (Client.Timeout exceeded while awaiting headers)|无可用渠道（distributor）|API key expired. Please renew the API key.|API key not valid. Please pass a valid API key.|该令牌状态不可用|write: broken pipe|Internal error encountered|Quota exceeded for quota metric |Client.Timeout exceeded while awaiting headers|Your API key was reported as leaked. Please use another API key.|err mess is \{\}|Too many tokens, please wait before trying again.|Generative Language API has not been used in project|failed to record log|Failed to unmarshal response: invalid character|total tokens is 0|fail to decode image config|error response body is empty|You exceeded your current quota, please check your plan and billing details|无效的令牌|read: connection reset by peer'
 */
 func errorMessageToCode(errorMessage string) string {
 	switch {
@@ -389,6 +389,11 @@ func errorMessageToCode(errorMessage string) string {
 		errorMessage = "total_tokens_is_0"
 	case strings.Contains(errorMessage, "fail to decode image config"):
 		errorMessage = "fail_to_decode_image_config"
+	case strings.Contains(errorMessage, "You exceeded your current quota, please check your plan and billing details"):
+		errorMessage = "exceeded_your_current_quota"
+	case strings.Contains(errorMessage, "无效的令牌"):
+		errorMessage = "invalid_token"
+
 	default:
 		errorMessage = "unknown"
 	}
