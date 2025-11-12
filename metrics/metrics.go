@@ -405,6 +405,16 @@ func errorMessageToCode(errorMessage string) string {
 		errorMessage = "nginx_error"
 	case strings.Contains(errorMessage, "该令牌额度已用尽"):
 		errorMessage = "token_quota_exhausted"
+	case strings.Contains(errorMessage, "可用渠道不存在"):
+		errorMessage = "no_available_channel"
+	case strings.Contains(errorMessage, "User location is not supported for the API use"):
+		errorMessage = "user_location_not_supported_for_the_api_use"
+	case strings.Contains(errorMessage, "No available channels for model"):
+		errorMessage = "no_available_channels_for_model"
+	case strings.Contains(errorMessage, "Could not finish the message because max_tokens or model output limit was reached"):
+		errorMessage = "max_tokens_or_model_output_limit_was_reached"
+	case strings.Contains(errorMessage, "unexpected end of JSON input"):
+		errorMessage = "unexpected_end_of_json_input"
 
 	case strings.Contains(errorMessage, "bad_response_status_code"):
 		errorMessage = "bad_response_status_code_unknown"
