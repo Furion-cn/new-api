@@ -371,6 +371,24 @@ func errorMessageToCode(errorMessage string) string {
 		errorMessage = "failed_to_get_request_body"
 	case strings.Contains(errorMessage, "read: connection reset by peer, code is do_request_failed"):
 		errorMessage = "read_connection_reset_by_peer_do_request_failed"
+	case strings.Contains(errorMessage, "Please reduce the length of the messages or completion"):
+		errorMessage = "please_reduce_the_length_of_the_messages_or_completion"
+	case strings.Contains(errorMessage, "insufficient tool messages following tool_calls message"):
+		errorMessage = "insufficient_tool_messages_following_tool_calls_message"
+	case strings.Contains(errorMessage, "Content Exists Risk"):
+		errorMessage = "content_exists_risk"
+	case strings.Contains(errorMessage, "Too many tokens, please wait before trying again."):
+		errorMessage = "too_many_tokens_please_wait_before_trying_again"
+	case strings.Contains(errorMessage, "Generative Language API has not been used in project"):
+		errorMessage = "generative_language_api_has_not_been_used_in_project"
+	case strings.Contains(errorMessage, "failed to record log"):
+		errorMessage = "failed_to_record_log"
+	case strings.Contains(errorMessage, "Failed to unmarshal response: invalid character"):
+		errorMessage = "failed_to_unmarshal_response_invalid_character"
+	case strings.Contains(errorMessage, "total tokens is 0"):
+		errorMessage = "total_tokens_is_0"
+	case strings.Contains(errorMessage, "fail to decode image config"):
+		errorMessage = "fail_to_decode_image_config"
 	default:
 		errorMessage = "unknown"
 	}
