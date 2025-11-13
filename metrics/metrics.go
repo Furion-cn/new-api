@@ -297,7 +297,7 @@ func IncrementConsumeLogTrafficSuccess(channel, channelName, model, group, userI
 }
 
 /*
-cat  oneapi-20251112221427.log  | grep '\[ERR\]' | grep -v -E 'write: connection timed out|The caller does not have permission|do request failed|no candidates returned|has been suspended|The caller does not havepermission|Quota exceeded for metric|Resource has been exhausted|The model is overloaded|当前分组上游负载已饱和|An internal error has occurred|have exceeded thecall rate limit for your current AIServicesS0 pricing tier|upstream error with status 408|failed to get model resp|The operation was timeout|exceeded for UserConcurrentRequests. Please wait|API Key not found|context deadline exceeded (Client.Timeout exceeded while awaiting headers)|无可用渠道（distributor）|API key expired. Please renew the API key.|API key not valid. Please pass a valid API key.|该令牌状态不可用|write: broken pipe|Internal error encountered|Quota exceeded for quota metric |Client.Timeout exceeded while awaiting headers|Your API key was reported as leaked. Please use another API key.|err mess is \{\}|Too many tokens, please wait before trying again.|GenerativeLanguage API has not been used in project|failed to record log|Failed to unmarshal response: invalid character|total tokens is 0|fail to decode image config|error response body is empty|You exceeded your current quota, please check your plan and billing details|无效的令牌|read: connection reset by peer|无可用渠道|must be followed by tool messages responding to each|Content Exists Risk|Please reducethe length of the messagesor completion|Too many requests, please wait before trying again.|no algo service available now|Input should be a valid list|Model tpm limit exceeded. Please try again later|nginx|Connection prematurely closed BEFORE response|该令牌额度已用尽|bad_response_status_code|可用渠道不存在|User location is not supported for the API use|No available channels for model|Could not finish the message because max_tokens or model output limit was reached|unexpected end of JSON input'
+cat  oneapi-20251113150748.log  | grep '\[ERR\]' | grep -v -E 'write: connection timed out|The caller does not have permission|do request failed|no candidates returned|has been suspended|The caller does not havepermission|Quota exceeded for metric|Resource has been exhausted|The model is overloaded|当前分组上游负载已饱和|An internal error has occurred|have exceeded thecall rate limit for your current AIServicesS0 pricing tier|upstream error with status 408|failed to get model resp|The operation was timeout|exceeded for UserConcurrentRequests. Please wait|API Key not found|context deadline exceeded (Client.Timeout exceeded while awaiting headers)|无可用渠道（distributor）|API key expired. Please renew the API key.|API key not valid. Please pass a valid API key.|该令牌状态不可用|write: broken pipe|Internal error encountered|Quota exceeded for quota metric |Client.Timeout exceeded while awaiting headers|Your API key was reported as leaked. Please use another API key.|err mess is \{\}|Too many tokens, please wait before trying again.|GenerativeLanguage API has not been used in project|failed to record log|Failed to unmarshal response: invalid character|total tokens is 0|fail to decode image config|error response body is empty|You exceeded your current quota, please check your plan and billing details|无效的令牌|read: connection reset by peer|无可用渠道|must be followed by tool messages responding to each|Content Exists Risk|Please reducethe length of the messagesor completion|Too many requests, please wait before trying again.|no algo service available now|Input should be a valid list|Model tpm limit exceeded. Please try again later|nginx|Connection prematurely closed BEFORE response|该令牌额度已用尽|bad_response_status_code|可用渠道不存在|User location is not supported for the API use|No available channels for model|Could not finish the message because max_tokens or model output limit was reached|unexpected end of JSON input'
 */
 func errorMessageToCode(errorMessage string) string {
 	switch {
@@ -359,6 +359,8 @@ func errorMessageToCode(errorMessage string) string {
 		errorMessage = "api_key_reported_as_leaked"
 	case strings.Contains(errorMessage, "error response body is empty"):
 		errorMessage = "error_response_body_is_empty"
+	case strings.Contains(errorMessage, "err mess is {}"):
+		errorMessage = "error_message_is_empty"
 	case strings.Contains(errorMessage, "无可用渠道"):
 		errorMessage = "no_available_channel"
 	case strings.Contains(errorMessage, "Client.Timeout or context cancellation while reading body"):
@@ -367,6 +369,8 @@ func errorMessageToCode(errorMessage string) string {
 		errorMessage = "failed_to_get_request_body"
 	case strings.Contains(errorMessage, "read: connection reset by peer, code is do_request_failed"):
 		errorMessage = "read_connection_reset_by_peer_do_request_failed"
+	case strings.Contains(errorMessage, "Transport received Server's graceful shutdown GOAWAY"):
+		errorMessage = "transport_received_server_goaway"
 	case strings.Contains(errorMessage, "Please reduce the length of the messages or completion"):
 		errorMessage = "please_reduce_the_length_of_the_messages_or_completion"
 	case strings.Contains(errorMessage, "insufficient tool messages following tool_calls message"):
@@ -411,10 +415,17 @@ func errorMessageToCode(errorMessage string) string {
 		errorMessage = "user_location_not_supported_for_the_api_use"
 	case strings.Contains(errorMessage, "No available channels for model"):
 		errorMessage = "no_available_channels_for_model"
+	case strings.Contains(errorMessage, "The provided model identifier is invalid."):
+		errorMessage = "model_identifier_invalid"
 	case strings.Contains(errorMessage, "Could not finish the message because max_tokens or model output limit was reached"):
 		errorMessage = "max_tokens_or_model_output_limit_was_reached"
 	case strings.Contains(errorMessage, "unexpected end of JSON input"):
 		errorMessage = "unexpected_end_of_json_input"
+
+	case strings.Contains(errorMessage, "This request would exceed the rate limit for your organization"):
+		errorMessage = "rate_limit_for_your_organization"
+	case strings.Contains(errorMessage, "The response was filtered due to the prompt triggering Azure OpenAI's content management policy. Please modify your prompt and retry."):
+		errorMessage = "azure_openai_content_management_policy"
 
 	case strings.Contains(errorMessage, "bad_response_status_code"):
 		errorMessage = "bad_response_status_code_unknown"
