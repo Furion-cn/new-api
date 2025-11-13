@@ -38,11 +38,20 @@ func ProxyHelper(c *gin.Context, relayInfo *relaycommon.RelayInfo, proxyRequest 
 	var funcErr *dto.OpenAIErrorWithStatusCode
 	metrics.IncrementRelayRequestTotalCounter(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, relayInfo.OriginModelName, relayInfo.Group, strconv.Itoa(relayInfo.UserId), relayInfo.UserName, 1)
 	defer func() {
-		if funcErr != nil {
-			err = fmt.Errorf(funcErr.Error.Message)
-		}
-		if err != nil {
-			metrics.IncrementRelayRequestFailedCounter(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, relayInfo.OriginModelName, relayInfo.Group, strconv.Itoa(openaiErr.StatusCode), strconv.Itoa(relayInfo.UserId), relayInfo.UserName, funcErr.Error.Message, 1)
+		if err != nil || funcErr != nil {
+			var statusCodeStr string
+			var errorMsg string
+			if funcErr != nil {
+				statusCodeStr = strconv.Itoa(funcErr.StatusCode)
+				errorMsg = funcErr.Error.Message
+			} else if openaiErr != nil {
+				statusCodeStr = strconv.Itoa(openaiErr.StatusCode)
+				errorMsg = err.Error()
+			} else {
+				statusCodeStr = "500"
+				errorMsg = err.Error()
+			}
+			metrics.IncrementRelayRequestFailedCounter(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, relayInfo.OriginModelName, relayInfo.Group, statusCodeStr, strconv.Itoa(relayInfo.UserId), relayInfo.UserName, errorMsg, 1)
 		} else {
 			metrics.IncrementRelayRequestSuccessCounter(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, relayInfo.OriginModelName, relayInfo.Group, strconv.Itoa(statusCode), strconv.Itoa(relayInfo.UserId), relayInfo.UserName, 1)
 			metrics.ObserveRelayRequestDuration(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, relayInfo.ChannelTag, relayInfo.BaseUrl, relayInfo.OriginModelName, relayInfo.Group, strconv.Itoa(relayInfo.UserId), relayInfo.UserName, time.Since(startTime).Seconds())
@@ -52,7 +61,8 @@ func ProxyHelper(c *gin.Context, relayInfo *relaycommon.RelayInfo, proxyRequest 
 	priceData, err := helper.ModelPriceHelper(c, relayInfo, 0, 0)
 	if err != nil {
 		common.LogError(c, fmt.Sprintf("Failed to get model price: %v", err))
-		return service.OpenAIErrorWrapperLocal(err, "model_price_error", http.StatusInternalServerError)
+		funcErr = service.OpenAIErrorWrapperLocal(err, "model_price_error", http.StatusInternalServerError)
+		return funcErr
 	}
 
 	relayInfo.StartTime = startTime
@@ -60,7 +70,8 @@ func ProxyHelper(c *gin.Context, relayInfo *relaycommon.RelayInfo, proxyRequest 
 	// 获取原始 body 数据
 	bodyBytes, ok := proxyRequest.([]byte)
 	if !ok {
-		return service.OpenAIErrorWrapperLocal(fmt.Errorf("invalid proxy request type"), "invalid_proxy_request", http.StatusInternalServerError)
+		funcErr = service.OpenAIErrorWrapperLocal(fmt.Errorf("invalid proxy request type"), "invalid_proxy_request", http.StatusInternalServerError)
+		return funcErr
 	}
 
 	// 创建 HTTP 请求
