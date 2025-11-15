@@ -30,7 +30,7 @@ FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/alpine:latest
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
     && apk update \
     && apk upgrade \
-    && apk add --no-cache ca-certificates tzdata ffmpeg logrotate dcron curl nvim\
+    && apk add --no-cache ca-certificates tzdata ffmpeg logrotate dcron curl neovim\
     && update-ca-certificates
 
 

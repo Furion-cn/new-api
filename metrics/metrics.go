@@ -31,6 +31,7 @@ func RegisterMetrics(registry prometheus.Registerer) {
 	registry.MustRegister(outputTokensCounter)
 	registry.MustRegister(cacheHitTokensCounter)
 	registry.MustRegister(inferenceTokensCounter)
+	registry.MustRegister(totalTokensCounter)
 	registry.MustRegister(promptTokensZeroOrNegativeCounter)
 	registry.MustRegister(completionTokensZeroOrNegativeCounter)
 	registry.MustRegister(thinkingTokensZeroOrNegativeCounter)
@@ -149,6 +150,13 @@ var (
 			Help:      "Total number of tokens processed during inference",
 		}, []string{"channel", "channel_name", "model", "group", "user_id", "user_name", "token_name"})
 
+	totalTokensCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Subsystem: Namespace,
+			Name:      "total_tokens_total",
+			Help:      "Total number of all tokens (input + output)",
+		}, []string{"channel", "channel_name", "model", "group", "user_id", "user_name", "token_name"})
+
 	// Zero or negative token counters
 	promptTokensZeroOrNegativeCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -263,6 +271,10 @@ func IncrementCacheHitTokens(channel, channelName, model, group, userId, userNam
 
 func IncrementInferenceTokens(channel, channelName, model, group, userId, userName, tokenName string, add float64) {
 	inferenceTokensCounter.WithLabelValues(channel, channelName, model, group, userId, userName, tokenName).Add(add)
+}
+
+func IncrementTotalTokens(channel, channelName, model, group, userId, userName, tokenName string, add float64) {
+	totalTokensCounter.WithLabelValues(channel, channelName, model, group, userId, userName, tokenName).Add(add)
 }
 
 // Zero or negative token metrics functions
