@@ -523,6 +523,7 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,
 		common.LogError(ctx, "response body is nil")
 		return
 	}
+	totalTokens := promptTokens + completionTokens + thinkingTokens
 	modelResp, err := dao.NewModelResp(ctx, responsebody.(string), modelName)
 	if err != nil {
 		common.LogError(ctx, "failed to get model resp: "+err.Error())
@@ -549,6 +550,9 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,
 			if thinkingTokens < logThinkingTokens {
 				thinkingTokens = logThinkingTokens
 			}
+			if totalTokens < int(commonTokenInfo.TotalTokens) {
+				totalTokens = int(commonTokenInfo.TotalTokens)
+			}
 		}
 	}
 
@@ -563,7 +567,6 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,
 	} else {
 		quota = int(modelPrice * common.QuotaPerUnit * groupRatio)
 	}
-	totalTokens := promptTokens + completionTokens + thinkingTokens
 
 	var logContent string
 	if !priceData.UsePrice {
@@ -611,7 +614,7 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,
 	// Record token metrics
 	metrics.IncrementInputTokens(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, modelName, relayInfo.Group, strconv.Itoa(relayInfo.UserId), userName, tokenName, float64(promptTokens))
 	metrics.IncrementOutputTokens(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, modelName, relayInfo.Group, strconv.Itoa(relayInfo.UserId), userName, tokenName, float64(completionTokens))
-
+	metrics.IncrementTotalTokens(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, modelName, relayInfo.Group, strconv.Itoa(relayInfo.UserId), userName, tokenName, float64(totalTokens))
 	if cacheTokens > 0 {
 		metrics.IncrementCacheHitTokens(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, modelName, relayInfo.Group, strconv.Itoa(relayInfo.UserId), userName, tokenName, float64(cacheTokens))
 	}
