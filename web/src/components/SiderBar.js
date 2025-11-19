@@ -64,6 +64,7 @@ const SiderBar = () => {
     detail: '/detail',
     pricing: '/pricing',
     task: '/task',
+    batch_job: '/batch_job',
     playground: '/playground',
     personal: '/personal',
     grafana: '/grafana',
@@ -112,6 +113,12 @@ const SiderBar = () => {
           localStorage.getItem('enable_task') === 'true'
             ? ''
             : 'tableHiddle',
+      },
+      {
+        text: t('批量任务'),
+        itemKey: 'batch_job',
+        to: '/batch_job',
+        icon: <IconChecklistStroked />,
       },
       {
         text: t('监控面板'),

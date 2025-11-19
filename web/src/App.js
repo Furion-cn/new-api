@@ -33,6 +33,7 @@ import { API, showError } from './helpers';
 import PersonalSetting from './components/PersonalSetting.js';
 import Usage from './pages/Usage';
 import Examples from './pages/Examples';
+import BatchJob from './pages/BatchJob';
 
 const Home = lazy(() => import('./pages/Home'));
 const Detail = lazy(() => import('./pages/Detail'));
@@ -236,6 +237,14 @@ function App() {
               <Suspense fallback={<Loading></Loading>}>
                 <Task />
               </Suspense>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path='/batch_job'
+          element={
+            <PrivateRoute>
+              <BatchJob />
             </PrivateRoute>
           }
         />

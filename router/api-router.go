@@ -188,6 +188,13 @@ func SetApiRouter(router *gin.Engine) {
 			taskRoute.GET("/self", middleware.UserAuth(), controller.GetUserTask)
 			taskRoute.GET("/", middleware.AdminAuth(), controller.GetAllTask)
 		}
+
+		// Batch Job 相关接口
+		batchJobRoute := apiRouter.Group("/batch_job")
+		batchJobRoute.Use(middleware.UserAuth())
+		{
+			batchJobRoute.GET("/list", controller.GetUserBatchJobs) // /api/batch_job/list
+		}
 	}
 }
 

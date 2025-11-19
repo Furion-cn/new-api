@@ -257,6 +257,18 @@ func migrateDB() error {
 	if err != nil {
 		return err
 	}
+	err = DB.AutoMigrate(&OAuth{})
+	if err != nil {
+		return err
+	}
+	err = DB.AutoMigrate(&BatchJobInfo{})
+	if err != nil {
+		return err
+	}
+	err = DB.AutoMigrate(&GoogleStorageLog{})
+	if err != nil {
+		return err
+	}
 	common.SysLog("database migrated")
 	err = createRootAccountIfNeed()
 	return err
