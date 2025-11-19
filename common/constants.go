@@ -201,6 +201,11 @@ const (
 )
 
 const (
+	OAuthStatusEnabled  = 1 // don't use 0, 0 is the default value!
+	OAuthStatusDisabled = 2 // also don't use 0
+)
+
+const (
 	ChannelTypeUnknown        = 0
 	ChannelTypeOpenAI         = 1
 	ChannelTypeMidjourney     = 2

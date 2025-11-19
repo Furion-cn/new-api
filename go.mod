@@ -41,8 +41,8 @@ require (
 
 require (
 	github.com/Furion-cn/tunnel_api v0.0.0-20251114064038-e15f1eb9ac86
-	github.com/stretchr/testify v1.10.0
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.70
+	golang.org/x/oauth2 v0.30.0
 )
 
 require (

@@ -35,6 +35,7 @@ func RegisterMetrics(registry prometheus.Registerer) {
 	registry.MustRegister(promptTokensZeroOrNegativeCounter)
 	registry.MustRegister(completionTokensZeroOrNegativeCounter)
 	registry.MustRegister(thinkingTokensZeroOrNegativeCounter)
+	registry.MustRegister(totalTokensZeroOrNegativeCounter)
 	// error log metrics
 	registry.MustRegister(errorLogCounter)
 	// consume log traffic metrics
@@ -179,6 +180,13 @@ var (
 			Help:      "Total number of times thinking tokens are zero or negative",
 		}, []string{"channel", "channel_name", "model", "group", "user_id", "user_name", "token_name"})
 
+	totalTokensZeroOrNegativeCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Subsystem: Namespace,
+			Name:      "total_tokens_zero_or_negative_total",
+			Help:      "Total number of times total tokens are zero or negative",
+		}, []string{"channel", "channel_name", "model", "group", "user_id", "user_name", "token_name"})
+
 	errorLogCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Subsystem: Namespace,
@@ -288,6 +296,10 @@ func IncrementCompletionTokensZeroOrNegative(channel, channelName, model, group,
 
 func IncrementThinkingTokensZeroOrNegative(channel, channelName, model, group, userId, userName, tokenName string, add float64) {
 	thinkingTokensZeroOrNegativeCounter.WithLabelValues(channel, channelName, model, group, userId, userName, tokenName).Add(add)
+}
+
+func IncrementTotalTokensZeroOrNegative(channel, channelName, model, group, userId, userName, tokenName string, add float64) {
+	totalTokensZeroOrNegativeCounter.WithLabelValues(channel, channelName, model, group, userId, userName, tokenName).Add(add)
 }
 
 // Error log metrics function

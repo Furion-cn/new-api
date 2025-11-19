@@ -629,6 +629,9 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,
 	if thinkingTokens <= 0 {
 		metrics.IncrementThinkingTokensZeroOrNegative(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, modelName, relayInfo.Group, strconv.Itoa(relayInfo.UserId), userName, tokenName, 1)
 	}
+	if totalTokens <= 0 {
+		metrics.IncrementTotalTokensZeroOrNegative(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, modelName, relayInfo.Group, strconv.Itoa(relayInfo.UserId), userName, tokenName, 1)
+	}
 
 	metrics.IncrementInferenceTokens(strconv.Itoa(relayInfo.ChannelId), relayInfo.ChannelName, modelName, relayInfo.Group, strconv.Itoa(relayInfo.UserId), userName, tokenName, float64(thinkingTokens))
 	other := service.GenerateTextOtherInfo(ctx, relayInfo, modelRatio, groupRatio, completionRatio, cacheTokens, cacheRatio, modelPrice)

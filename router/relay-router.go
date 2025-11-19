@@ -14,6 +14,20 @@ func SetRelayRouter(router *gin.Engine) {
 
 	// 添加ping路由用于测试
 	router.GET("/ping", controller.Ping)
+	router.POST("/google/token", middleware.GoogleStorageLogger(), controller.GoogleToken)
+
+	// Google 相关路由组，应用路径校准和 OAuth 验证中间件
+	googleRouter := router.Group("/google")
+	googleRouter.Use(middleware.GoogleOAuthAuth())
+	googleRouter.Use(middleware.GoogleStorageLogger()) // 添加 Google Storage 日志记录中间件
+	{
+		// Google Storage 代理路由，支持所有 HTTP 方法
+		googleRouter.Any("/storage/*path", controller.GoogleStorageProxy)
+		googleRouter.Any("/download/storage/*path", controller.GoogleStorageProxy)
+		googleRouter.Any("/upload/storage/*path", controller.GoogleStorageProxy)
+		// Google Vertex AI v1beta1 代理路由，支持所有 HTTP 方法
+		googleRouter.Any("/v1beta1/*path", controller.GoogleV1Beta1Proxy)
+	}
 
 	batchJobRouter := router.Group("/batchjob")
 	batchJobRouter.Use(middleware.TokenAuth(), middleware.Distribute())
