@@ -12,9 +12,28 @@ FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/golang:1.24-alpine AS bu
 ENV GO111MODULE=on \
     CGO_ENABLED=0 \
     GOOS=linux \
-    GOPROXY=https://goproxy.cn
+    GOPROXY=https://goproxy.cn \
+    GOTOOLCHAIN=auto \
+    GOPRIVATE=github.com/Furion-cn/*
+
+# 定义私有仓库鉴权环境变量
+ARG GITHUB_USERNAME
+ARG GITHUB_TOKEN
+ARG GITHUB_PRIVATE_URL="https://github.com/"
+
+# 安装 git 并配置私有仓库鉴权（使用缓存优化）
+RUN apk add --no-cache git
 
 WORKDIR /build
+
+# 使用环境变量配置 git 以支持私有仓库访问
+RUN if [ -n "$GITHUB_USERNAME" ] && [ -n "$GITHUB_TOKEN" ]; then \
+        git config --global url."https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/".insteadOf "${GITHUB_PRIVATE_URL}"; \
+        git config --global url."https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/Furion-cn/".insteadOf "https://github.com/Furion-cn/"; \
+        git config --global credential.helper store; \
+        echo "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com" > ~/.git-credentials; \
+        git config --global http.sslVerify false; \
+    fi
 
 ADD go.mod go.sum ./
 RUN go mod tidy
