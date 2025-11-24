@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -116,6 +117,25 @@ func GoogleStorageLogger() gin.HandlerFunc {
 		// 记录响应体（进行截断处理）
 		responseBody := responseWriter.body.Bytes()
 		responseContentType := c.Writer.Header().Get("Content-Type")
+
+		// 检查响应是否被 gzip 压缩，如果是则解压缩
+		contentEncoding := c.Writer.Header().Get("Content-Encoding")
+		if contentEncoding == "gzip" && len(responseBody) > 0 {
+			// 尝试解压缩
+			gzipReader, err := gzip.NewReader(bytes.NewReader(responseBody))
+			if err == nil {
+				decompressed, err := io.ReadAll(gzipReader)
+				gzipReader.Close()
+				if err == nil {
+					responseBody = decompressed
+				} else {
+					common.LogError(c.Request.Context(), "Failed to decompress gzip response body for logging: "+err.Error())
+				}
+			} else {
+				common.LogError(c.Request.Context(), "Failed to create gzip reader for logging: "+err.Error())
+			}
+		}
+
 		logEntry.ResponseBody = common.TruncatedBody(string(responseBody), responseContentType)
 
 		// 异步保存日志到数据库
