@@ -453,6 +453,14 @@ func errorMessageToCode(errorMessage string) string {
 
 	case strings.Contains(errorMessage, "bad_response_status_code"):
 		errorMessage = "bad_response_status_code_unknown"
+	case strings.Contains(errorMessage, "contents is required"):
+		errorMessage = "contents_is_required"
+	case strings.Contains(errorMessage, "err mess is {<html>"):
+		errorMessage = "nginx_502"
+	case strings.Contains(errorMessage, `EOF, code is do_request_failed`):
+		errorMessage = "do_request_failed_eof"
+	case strings.Contains(errorMessage, "i/o timeout, code is do_request_failed"):
+		errorMessage = "i_o_timeout_do_request_failed"
 	default:
 		errorMessage = "unknown"
 	}
