@@ -56,7 +56,7 @@ func LogRequestInfo(c *gin.Context, isTruncated bool, modelName string) (reqInfo
 		return reqInfo, errors.New("failed to get request body")
 	}
 
-	if strings.Contains(responseheaders.(string), "stream") {
+	if strings.Contains(responseheaders.(string), "text/event-stream") {
 		isTruncated = false
 	}
 
