@@ -200,9 +200,20 @@ func RecordConsumeLog(c *gin.Context, userId int, channelId int, promptTokens in
 
 	if err != nil {
 		common.LogError(c, "failed to record log: "+err.Error())
-		// 记录消费失败流量监控指标
-		metrics.IncrementConsumeLogTrafficFailed(strconv.Itoa(channelId), channelName, modelName, group,
-			strconv.Itoa(userId), username, tokenName, "database_error", 1)
+		// 尝试去掉 RequestInfo 使用默认值重新插入
+		log.RequestInfo = common.RequestInfo{}
+		retryErr := LOG_DB.Table(tableName).Create(log).Error
+		if retryErr != nil {
+			common.LogError(c, "failed to record log after retry: "+retryErr.Error())
+			// 记录消费失败流量监控指标
+			metrics.IncrementConsumeLogTrafficFailed(strconv.Itoa(channelId), channelName, modelName, group,
+				strconv.Itoa(userId), username, tokenName, "database_error", 1)
+		} else {
+			// 重试成功，记录成功消费日志流量监控指标
+			metrics.IncrementConsumeLogTrafficSuccess(strconv.Itoa(channelId), channelName, modelName, group,
+				strconv.Itoa(userId), username, tokenName, 1)
+		}
+
 	} else {
 		// 记录成功消费日志流量监控指标
 		metrics.IncrementConsumeLogTrafficSuccess(strconv.Itoa(channelId), channelName, modelName, group,
