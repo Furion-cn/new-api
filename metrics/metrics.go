@@ -461,6 +461,13 @@ func errorMessageToCode(errorMessage string) string {
 		errorMessage = "do_request_failed_eof"
 	case strings.Contains(errorMessage, "i/o timeout, code is do_request_failed"):
 		errorMessage = "i_o_timeout_do_request_failed"
+	case strings.Contains(errorMessage, "sensitive_words_detected"):
+		errorMessage = "sensitive_words_detected"
+	case strings.Contains(errorMessage, "upstream error with status 504, err mess is {<html>"):
+		errorMessage = "upstream_504_html"
+	case strings.Contains(errorMessage, "error response body: <html>"):
+		errorMessage = "error_response_body_html"
+
 	default:
 		errorMessage = "unknown"
 	}
