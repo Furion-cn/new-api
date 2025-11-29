@@ -2,6 +2,7 @@ package relay
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -216,25 +217,45 @@ func ProxyHelper(c *gin.Context, relayInfo *relaycommon.RelayInfo, proxyRequest 
 		}
 	}
 
-	c.Set(common.CtxResponseBody, string(responseBodyBytes))
+	// 处理响应体用于后续流程：如果是 gzip 压缩的，需要先解压缩
+	responseBodyForLog := responseBodyBytes
+	contentEncoding := httpResp.Header.Get("Content-Encoding")
+	if contentEncoding == "gzip" && len(responseBodyBytes) > 0 {
+		// 尝试解压缩用于日志记录和后续处理
+		gzipReader, err := gzip.NewReader(bytes.NewReader(responseBodyBytes))
+		if err == nil {
+			decompressed, err := io.ReadAll(gzipReader)
+			gzipReader.Close()
+			if err == nil {
+				responseBodyForLog = decompressed
+				common.LogInfo(c, fmt.Sprintf("Response body was gzip compressed (%d bytes), decompressed to %d bytes for logging", len(responseBodyBytes), len(decompressed)))
+			} else {
+				common.LogError(c, fmt.Sprintf("Failed to decompress gzip response body for logging: %v", err))
+			}
+		} else {
+			common.LogError(c, fmt.Sprintf("Failed to create gzip reader for logging: %v", err))
+		}
+	}
+
+	c.Set(common.CtxResponseBody, string(responseBodyForLog))
 	// 生成处理后的响应字符串用于配额统计
 	var processedResponseStr string
-	if len(responseBodyBytes) > 0 {
+	if len(responseBodyForLog) > 0 {
 		if isStream {
 			// 流式响应：解析SSE格式并提取最后的usage信息
-			processedResponseStr = extractUsageFromStreamResponse(responseBodyBytes)
+			processedResponseStr = extractUsageFromStreamResponse(responseBodyForLog)
 		} else {
 			// 非流式响应：正常处理
 			var responseData interface{}
-			if err := json.Unmarshal(responseBodyBytes, &responseData); err == nil {
+			if err := json.Unmarshal(responseBodyForLog, &responseData); err == nil {
 				processedResponse := common.ProcessMapValues(responseData)
 				if processedJSON, err := json.Marshal(processedResponse); err == nil {
 					processedResponseStr = string(processedJSON)
 				} else {
-					processedResponseStr = string(responseBodyBytes)
+					processedResponseStr = string(responseBodyForLog)
 				}
 			} else {
-				processedResponseStr = string(responseBodyBytes)
+				processedResponseStr = string(responseBodyForLog)
 			}
 		}
 	}
