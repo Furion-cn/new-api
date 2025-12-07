@@ -467,6 +467,12 @@ func errorMessageToCode(errorMessage string) string {
 		errorMessage = "upstream_504_html"
 	case strings.Contains(errorMessage, "error response body: <html>"):
 		errorMessage = "error_response_body_html"
+	case strings.Contains(errorMessage, "is not owned by the user"):
+		errorMessage = "is_not_owned_by_the_user"
+	case strings.Contains(errorMessage, "failed to get model resp"):
+		errorMessage = "failed_to_get_model_resp"
+	case strings.Contains(errorMessage, "Resource exhausted"):
+		errorMessage = "resource_exhausted"
 
 	default:
 		errorMessage = "unknown"
