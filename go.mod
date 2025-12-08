@@ -40,7 +40,7 @@ require (
 )
 
 require (
-	github.com/Furion-cn/tunnel_api v0.0.0-20251205093823-b57069487101
+	github.com/Furion-cn/tunnel_api v0.0.0-20251207160027-a0b3d8bd71e0
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.71
 	golang.org/x/oauth2 v0.32.0
 )
@@ -56,6 +56,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/goccy/go-yaml v1.19.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
