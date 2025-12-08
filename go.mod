@@ -40,7 +40,7 @@ require (
 )
 
 require (
-	github.com/Furion-cn/tunnel_api v0.0.0-20251207160027-a0b3d8bd71e0
+	github.com/Furion-cn/tunnel_api v0.0.0-20251208062316-11550fcd6205
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.71
 	golang.org/x/oauth2 v0.32.0
 )
