@@ -490,7 +490,7 @@ const LogsTable = () => {
   const [activePage, setActivePage] = useState(1);
   const [logCount, setLogCount] = useState(ITEMS_PER_PAGE);
   const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
-  const [logType, setLogType] = useState(0);
+  const [logType, setLogType] = useState(2);
   const isAdminUser = isAdmin();
   let now = new Date();
   // 初始化start_timestamp为今天0点
@@ -910,7 +910,7 @@ const LogsTable = () => {
         </Form>
         <div style={{marginTop:10}}>
           <Select
-              defaultValue='0'
+              defaultValue='2'
               style={{ width: 120 }}
               onChange={(value) => {
                 setLogType(parseInt(value));

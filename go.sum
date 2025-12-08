@@ -10,10 +10,6 @@ filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/Calcium-Ion/go-epay v0.0.4 h1:C96M7WfRLadcIVscWzwLiYs8etI1wrDmtFMuK2zP22A=
 github.com/Calcium-Ion/go-epay v0.0.4/go.mod h1:cxo/ZOg8ClvE3VAnCmEzbuyAZINSq7kFEN9oHj5WQ2U=
-github.com/Furion-cn/tunnel_api v0.0.0-20251205093823-b57069487101 h1:VRkXR+mo8RGGKUMT82QOm6VkYl1X6DrNMFowdIikajg=
-github.com/Furion-cn/tunnel_api v0.0.0-20251205093823-b57069487101/go.mod h1:2sBBoHgQX8gJdaTAFF94qkPiWR29nr9fO6GDs6vWV5w=
-github.com/Furion-cn/tunnel_api v0.0.0-20251207160027-a0b3d8bd71e0 h1:WBHTn1IGGu+aZQ/WURz9DmeOvkcbgSLEndYvFnmaAEs=
-github.com/Furion-cn/tunnel_api v0.0.0-20251207160027-a0b3d8bd71e0/go.mod h1:2sBBoHgQX8gJdaTAFF94qkPiWR29nr9fO6GDs6vWV5w=
 github.com/Furion-cn/tunnel_api v0.0.0-20251208062316-11550fcd6205 h1:d3xWvdq3hUBmjGJjhllFzd4tLWMY8ZYBIks4YtBMD9Q=
 github.com/Furion-cn/tunnel_api v0.0.0-20251208062316-11550fcd6205/go.mod h1:2sBBoHgQX8gJdaTAFF94qkPiWR29nr9fO6GDs6vWV5w=
 github.com/andybalholm/brotli v1.1.1 h1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=
