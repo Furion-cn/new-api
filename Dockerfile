@@ -9,20 +9,28 @@ RUN DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION=$(cat VERSION) bun run b
 
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/golang:1.24-alpine AS builder2
 
+# 安装 git（放在最前面以利用缓存）
+RUN apk add --no-cache git
+
+# 定义代理环境变量
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+
 ENV GO111MODULE=on \
     CGO_ENABLED=0 \
     GOOS=linux \
     GOPROXY=https://goproxy.cn \
     GOTOOLCHAIN=auto \
-    GOPRIVATE=github.com/Furion-cn/*
+    GOPRIVATE=github.com/Furion-cn/* \
+    HTTP_PROXY=${HTTP_PROXY} \
+    HTTPS_PROXY=${HTTPS_PROXY} \
+    NO_PROXY=${NO_PROXY}
 
 # 定义私有仓库鉴权环境变量
 ARG GITHUB_USERNAME
 ARG GITHUB_TOKEN
 ARG GITHUB_PRIVATE_URL="https://github.com/"
-
-# 安装 git 并配置私有仓库鉴权（使用缓存优化）
-RUN apk add --no-cache git
 
 WORKDIR /build
 
@@ -36,13 +44,16 @@ RUN if [ -n "$GITHUB_USERNAME" ] && [ -n "$GITHUB_TOKEN" ]; then \
     fi
 
 ADD go.mod go.sum ./
-RUN go mod tidy
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download
 
 COPY . .
 COPY --from=builder /build/dist ./web/dist
-RUN go mod tidy
-RUN go build -ldflags "-s -w -X 'one-api/common.Version=$(cat VERSION)'" -o one-api
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod tidy && \
+    go build -ldflags "-s -w -X 'one-api/common.Version=$(cat VERSION)'" -o one-api
 
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/alpine:latest
 
