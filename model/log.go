@@ -237,6 +237,14 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 	allLogs := make([]*Log, 0)
 	total = 0
 
+	// 如果是消费日志（type=2）且没有 channel 和 group 筛选，直接从 quota_data 表统计总数
+	if logType == LogTypeConsume && channel == 0 && group == "" {
+		total, err = getLogsCountFromQuotaData(startTimestamp, endTimestamp, modelName, username, tokenName)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
 	// 遍历每个表进行查询
 	for _, tableName := range tableNames {
 		var tempTotal int64
@@ -268,11 +276,13 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 			tx = tx.Where(groupCol+" = ?", group)
 		}
 
-		// 获取当前表的总数
-		if err = tx.Count(&tempTotal).Error; err != nil {
-			return nil, 0, err
+		// 如果不是消费日志或有 channel/group 筛选，走原来的 COUNT 逻辑
+		if logType != LogTypeConsume || channel != 0 || group != "" {
+			if err = tx.Count(&tempTotal).Error; err != nil {
+				return nil, 0, err
+			}
+			total += tempTotal
 		}
-		total += tempTotal
 
 		// 获取当前表的数据
 		if err = tx.Order("id desc").Find(&tempLogs).Error; err != nil {
@@ -473,6 +483,31 @@ type Stat struct {
 	Quota int `json:"quota"`
 	Rpm   int `json:"rpm"`
 	Tpm   int `json:"tpm"`
+}
+
+// getLogsCountFromQuotaData 从 quota_data 表统计消费日志总数
+func getLogsCountFromQuotaData(startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string) (int64, error) {
+	var total int64
+	tx := DB.Table("quota_data").Select("COALESCE(SUM(count), 0)")
+
+	if username != "" {
+		tx = tx.Where("username = ?", username)
+	}
+	if tokenName != "" {
+		tx = tx.Where("token_name = ?", tokenName)
+	}
+	if startTimestamp != 0 {
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+	if modelName != "" {
+		tx = tx.Where("model_name LIKE ?", modelName)
+	}
+
+	err := tx.Scan(&total).Error
+	return total, err
 }
 
 // 添加一个辅助函数用于获取时间范围内的所有表名
