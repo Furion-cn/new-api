@@ -506,7 +506,9 @@ func getLogsCountFromQuotaData(startTimestamp int64, endTimestamp int64, modelNa
 		tx = tx.Where("model_name LIKE ?", modelName)
 	}
 
-	err := tx.Scan(&total).Error
+	// 打印 SQL 日志
+	err := tx.Debug().Scan(&total).Error
+	common.SysLog(fmt.Sprintf("getLogsCountFromQuotaData result: total=%d, err=%v", total, err))
 	return total, err
 }
 
