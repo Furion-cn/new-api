@@ -233,10 +233,6 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 		return nil, 0, nil
 	}
 
-	// 用于存储所有查询结果
-	allLogs := make([]*Log, 0)
-	total = 0
-
 	// 如果是消费日志（type=2）且没有 channel 和 group 筛选，直接从 quota_data 表统计总数
 	if logType == LogTypeConsume && channel == 0 && group == "" {
 		total, err = getLogsCountFromQuotaData(startTimestamp, endTimestamp, modelName, username, tokenName)
@@ -245,9 +241,14 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 		}
 	}
 
-	// 遍历每个表进行查询
-	for _, tableName := range tableNames {
-		var tempTotal int64
+	// 需要查询的总数量 = 跳过的 + 需要的
+	needCount := startIdx + num
+	// 用于存储查询结果
+	allLogs := make([]*Log, 0, needCount)
+
+	// 倒序遍历表（从最新的表开始查询）
+	for i := len(tableNames) - 1; i >= 0; i-- {
+		tableName := tableNames[i]
 		var tempLogs []*Log
 		var tx = LOG_DB.Table(tableName)
 
@@ -278,30 +279,37 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 
 		// 如果不是消费日志或有 channel/group 筛选，走原来的 COUNT 逻辑
 		if logType != LogTypeConsume || channel != 0 || group != "" {
+			var tempTotal int64
 			if err = tx.Count(&tempTotal).Error; err != nil {
 				return nil, 0, err
 			}
 			total += tempTotal
 		}
 
-		// 获取当前表的数据
-		if err = tx.Order("id desc").Find(&tempLogs).Error; err != nil {
+		// 只查询还需要的数量
+		remaining := needCount - len(allLogs)
+		if remaining <= 0 {
+			continue // 数据已够，跳过数据查询，但继续统计 total
+		}
+
+		// 获取当前表的数据，限制数量
+		if err = tx.Order("id desc").Limit(remaining).Find(&tempLogs).Error; err != nil {
 			return nil, 0, err
 		}
 		allLogs = append(allLogs, tempLogs...)
 	}
 
-	// 对所有结果按时间倒序排序
+	// 对结果按时间倒序排序（因为可能跨表）
 	sort.Slice(allLogs, func(i, j int) bool {
 		return allLogs[i].CreatedAt > allLogs[j].CreatedAt
 	})
 
-	// 处理分页
-	end := startIdx + num
-	if end > len(allLogs) {
-		end = len(allLogs)
-	}
+	// 处理分页：跳过 startIdx，取 num 条
 	if startIdx < len(allLogs) {
+		end := startIdx + num
+		if end > len(allLogs) {
+			end = len(allLogs)
+		}
 		logs = allLogs[startIdx:end]
 	}
 
