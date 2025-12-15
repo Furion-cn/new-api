@@ -90,6 +90,15 @@ func SetRelayRouter(router *gin.Engine) {
 		httpRouter.POST("/messages", controller.Relay)
 	}
 
+	// v2 路由，所有请求统一走 Relay
+	relayV2Router := router.Group("/v2")
+	relayV2Router.Use(middleware.TokenAuth())
+	relayV2Router.Use(middleware.ModelRequestRateLimit())
+	relayV2Router.Use(middleware.Distribute(), middleware.UserTokenModelRateLimit())
+	{
+		relayV2Router.Any("/*path", controller.Relay)
+	}
+
 	// Google Gemini v1beta API routes
 	relayV1BetaRouter := router.Group("/v1beta")
 	relayV1BetaRouter.Use(middleware.TokenAuth())
