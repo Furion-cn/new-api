@@ -274,7 +274,6 @@ func logHelper(ctx context.Context, level string, msg string) {
 
 	// 如果是错误日志，增加错误计数
 	if level == loggerError {
-		errorType, errorCode := getErrorType(msg)
 		// 从上下文中获取相关信息
 		channel := "unknown"
 		channelName := "unknown"
@@ -285,13 +284,15 @@ func logHelper(ctx context.Context, level string, msg string) {
 		userName := "unknown"
 
 		if ginCtx, ok := ctx.Value("gin_context").(*gin.Context); ok {
-			if ch := ginCtx.GetString("channel"); ch != "" {
-				channel = ch
+			// channel_id 是 int 类型
+			if ch := ginCtx.GetInt("channel_id"); ch != 0 {
+				channel = fmt.Sprintf("%d", ch)
 			}
 			if chName := ginCtx.GetString("channel_name"); chName != "" {
 				channelName = chName
 			}
-			if m := ginCtx.GetString("model"); m != "" {
+			// model 在 distributor.go 中设置为 "original_model"
+			if m := ginCtx.GetString("original_model"); m != "" {
 				model = m
 			}
 			if g := ginCtx.GetString("group"); g != "" {
@@ -300,15 +301,16 @@ func logHelper(ctx context.Context, level string, msg string) {
 			if tn := ginCtx.GetString("token_name"); tn != "" {
 				tokenName = tn
 			}
-			if userId := ginCtx.GetString("user_id"); userId != "" {
-				userId = userId
+			// user id 在 auth.go 中设置为 "id"，类型是 int
+			if ctx_userId := ginCtx.GetInt("id"); ctx_userId != 0 {
+				userId = fmt.Sprintf("%d", ctx_userId)
 			}
-			if userName := ginCtx.GetString("user_name"); userName != "" {
-				userName = userName
+			// username 在 auth.go 中设置为 "username"
+			if ctx_userName := ginCtx.GetString("username"); ctx_userName != "" {
+				userName = ctx_userName
 			}
 		}
-
-		metrics.IncrementErrorLog(channel, channelName, errorCode, errorType, model, group, tokenName, userId, userName, 1.0)
+		metrics.IncrementErrorLog(channel, channelName, msg, model, group, tokenName, userId, userName, 1.0)
 	}
 
 	logCount++ // we don't need accurate count, so no lock here

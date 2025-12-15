@@ -192,7 +192,7 @@ var (
 			Subsystem: Namespace,
 			Name:      "error_log_total",
 			Help:      "Total number of error logs",
-		}, []string{"channel", "channel_name", "error_code", "error_type", "model", "group", "token_name", "user_id", "user_name"})
+		}, []string{"channel", "channel_name", "error_message", "error_type", "model", "group", "token_name", "user_id", "user_name"})
 
 	// Consume log traffic metrics
 	consumeLogTrafficTotalCounter = prometheus.NewCounterVec(
@@ -303,8 +303,10 @@ func IncrementTotalTokensZeroOrNegative(channel, channelName, model, group, user
 }
 
 // Error log metrics function
-func IncrementErrorLog(channel, channelName, errorCode, errorType, model, group, tokenName, userId, userName string, add float64) {
-	errorLogCounter.WithLabelValues(channel, channelName, errorCode, errorType, model, group, tokenName, userId, userName).Add(add)
+func IncrementErrorLog(channel, channelName, errorMessage, model, group, tokenName, userId, userName string, add float64) {
+	errorType := "unknown"
+	errorMessage = errorMessageToCode(errorMessage)
+	errorLogCounter.WithLabelValues(channel, channelName, errorMessage, errorType, model, group, tokenName, userId, userName).Add(add)
 }
 
 // Consume log traffic metrics functions
