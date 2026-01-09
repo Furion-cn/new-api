@@ -209,6 +209,12 @@ func Relay(c *gin.Context) {
 			if openaiErr == nil {
 				common.LogInfo(c, fmt.Sprintf("channel: %d,name %s, requestModel: %s, group: %s, tokenKey: %s, tokenName: %s, userId: %s, userName: %s", channel.Id, channel.Name, requestModel, group, tokenKey, tokenName, userId, userName))
 				metrics.IncrementRelayRequestE2ESuccessCounter(strconv.Itoa(channel.Id), channel.Name, requestModel, group, tokenKey, tokenName, userId, userName, 1)
+
+				// 处理 /v1/videos 响应，提取 video_id 并存储到 Redis
+				if strings.HasPrefix(c.Request.URL.Path, "/v1/videos") && !strings.Contains(c.Request.URL.Path, "/v1/videos/video_") {
+					handleVideoResponse(c, channel.Id)
+				}
+
 				return
 			}
 			if strings.Contains(openaiErr.Error.Message, "No candidates returned") && originalModel == "gemini-2.5-pro" {
@@ -685,4 +691,231 @@ func shouldRetryTaskRelay(c *gin.Context, channelId int, taskErr *dto.TaskError,
 		return false
 	}
 	return true
+}
+
+// handleVideoResponse 处理 /v1/videos 响应，提取 video_id 并存储到 Redis
+func handleVideoResponse(c *gin.Context, channelId int) {
+	// 从上下文获取响应体
+	responseBody, exists := c.Get(common.CtxResponseBody)
+	if !exists {
+		common.LogInfo(c, "响应体未找到，跳过 video_id 存储")
+		return
+	}
+
+	responseBodyStr, ok := responseBody.(string)
+	if !ok || responseBodyStr == "" {
+		common.LogInfo(c, "响应体为空或格式错误，跳过 video_id 存储")
+		return
+	}
+
+	// 解析 JSON 响应
+	var responseData map[string]interface{}
+	if err := json.Unmarshal([]byte(responseBodyStr), &responseData); err != nil {
+		common.LogError(c, fmt.Sprintf("解析响应 JSON 失败: %v", err))
+		return
+	}
+
+	// 尝试从不同可能的字段中提取 video_id
+	var videoId string
+	if id, ok := responseData["id"].(string); ok && id != "" {
+		videoId = id
+	} else if videoIdVal, ok := responseData["video_id"].(string); ok && videoIdVal != "" {
+		videoId = videoIdVal
+	} else if videoIdVal, ok := responseData["videoId"].(string); ok && videoIdVal != "" {
+		videoId = videoIdVal
+	}
+
+	if videoId == "" {
+		common.LogInfo(c, "响应中未找到 video_id，跳过存储")
+		return
+	}
+
+	// 存储到 Redis：key = video_id, value = channel_id
+	if common.RedisEnabled {
+		channelIdStr := strconv.Itoa(channelId)
+		// 设置过期时间为 7 天
+		expiration := 7 * 24 * time.Hour
+		if err := common.RedisSet(videoId, channelIdStr, expiration); err != nil {
+			common.LogError(c, fmt.Sprintf("存储 video_id=%s 到 Redis 失败: %v", videoId, err))
+		} else {
+			common.LogInfo(c, fmt.Sprintf("成功存储 video_id=%s 到 Redis，对应渠道 ID=%d", videoId, channelId))
+		}
+	} else {
+		common.LogInfo(c, "Redis 未启用，跳过 video_id 存储")
+	}
+}
+
+// VideoDownloadProxy 直接代理视频请求，不经过 Relay 的完整流程
+// 用于 GET /v1/videos/video_xxx、GET /v1/videos/video_xxx/content 和 DELETE /v1/videos/video_xxx 请求
+// 直接从 Redis 获取渠道 ID 并转发，支持 variant 查询参数（video、thumbnail、spritesheet）
+func VideoDownloadProxy(c *gin.Context) {
+	// 检查是否是 GET 或 DELETE 请求且 videoId 以 video_ 开头
+	videoId := c.Param("videoId")
+	if (c.Request.Method != "GET" && c.Request.Method != "DELETE") || !strings.HasPrefix(videoId, "video_") {
+		// 如果不是 GET/DELETE 请求或者不是 video_ 开头，走正常的 Relay 流程
+		Relay(c)
+		return
+	}
+
+	// 从上下文获取渠道 ID（应该在 middleware.Distribute 中已经设置）
+	channelId := c.GetInt("channel_id")
+	if channelId == 0 {
+		// 如果上下文没有渠道 ID，尝试从 Redis 获取
+		if common.RedisEnabled {
+			channelIdStr, err := common.RedisGet(videoId)
+			if err == nil && channelIdStr != "" {
+				if id, err := strconv.Atoi(channelIdStr); err == nil {
+					channelId = id
+				}
+			}
+		}
+	}
+
+	if channelId == 0 {
+		common.LogError(c, "无法获取渠道 ID，无法代理视频下载请求")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"message": "无法获取渠道 ID",
+				"type":    "invalid_request_error",
+			},
+		})
+		return
+	}
+
+	// 获取渠道信息
+	channel, err := model.GetChannelById(channelId, true)
+	if err != nil {
+		common.LogError(c, fmt.Sprintf("获取渠道失败: %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"message": "获取渠道信息失败",
+				"type":    "internal_error",
+			},
+		})
+		return
+	}
+
+	if channel == nil {
+		common.LogError(c, fmt.Sprintf("渠道 #%d 不存在", channelId))
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": gin.H{
+				"message": "渠道不存在",
+				"type":    "invalid_request_error",
+			},
+		})
+		return
+	}
+
+	if channel.Status != common.ChannelStatusEnabled {
+		common.LogError(c, fmt.Sprintf("渠道 #%d 已被禁用", channelId))
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": gin.H{
+				"message": "渠道已被禁用",
+				"type":    "invalid_request_error",
+			},
+		})
+		return
+	}
+
+	// 构建目标 URL
+	baseURL := channel.GetBaseURL()
+	if baseURL == "" {
+		baseURL = "https://api.openai.com"
+	}
+	targetURL := baseURL + c.Request.URL.Path
+	if c.Request.URL.RawQuery != "" {
+		targetURL += "?" + c.Request.URL.RawQuery
+	}
+
+	common.LogInfo(c, fmt.Sprintf("视频下载代理: %s %s -> %s (渠道 #%d)", c.Request.Method, c.Request.URL.Path, targetURL, channelId))
+
+	// 读取请求体（GET 请求通常没有请求体，但为了通用性还是读取）
+	requestBody, err := common.GetRequestBody(c)
+	if err != nil {
+		common.LogError(c, fmt.Sprintf("读取请求体失败: %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"message": "读取请求体失败",
+				"type":    "internal_error",
+			},
+		})
+		return
+	}
+
+	// 创建 HTTP 请求
+	req, err := http.NewRequest(c.Request.Method, targetURL, bytes.NewBuffer(requestBody))
+	if err != nil {
+		common.LogError(c, fmt.Sprintf("创建请求失败: %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"message": "创建请求失败",
+				"type":    "internal_error",
+			},
+		})
+		return
+	}
+
+	// 复制请求头
+	for key, values := range c.Request.Header {
+		lowerKey := strings.ToLower(key)
+		// 跳过一些会导致问题的头部
+		if lowerKey == "host" {
+			continue
+		}
+		if lowerKey == "content-length" {
+			continue
+		}
+		// 替换 Authorization header 为渠道的 Key
+		if lowerKey == "authorization" {
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
+			continue
+		}
+		// 保留所有其他头部
+		for _, value := range values {
+			req.Header.Add(key, value)
+		}
+	}
+
+	// 创建 HTTP 客户端（使用默认客户端，不使用代理）
+	// 使用环境变量 RELAY_TIMEOUT 配置超时时间，如果未设置或为 0，则使用 3600 秒作为默认值
+	timeout := 3600 * time.Second
+	if common.RelayTimeout > 0 {
+		timeout = time.Duration(common.RelayTimeout) * time.Second
+	}
+	client := &http.Client{
+		Timeout: timeout,
+	}
+
+	// 发送请求
+	resp, err := client.Do(req)
+	if err != nil {
+		common.LogError(c, fmt.Sprintf("代理请求失败: %v", err))
+		c.JSON(http.StatusBadGateway, gin.H{
+			"error": gin.H{
+				"message": "代理请求失败",
+				"type":    "upstream_error",
+			},
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	// 复制响应头
+	for key, values := range resp.Header {
+		for _, value := range values {
+			c.Writer.Header().Add(key, value)
+		}
+	}
+
+	// 设置状态码
+	c.Writer.WriteHeader(resp.StatusCode)
+
+	// 复制响应体（直接流式传输，不缓存）
+	_, err = io.Copy(c.Writer, resp.Body)
+	if err != nil {
+		common.LogError(c, fmt.Sprintf("复制响应体失败: %v", err))
+		return
+	}
+
+	common.LogInfo(c, fmt.Sprintf("视频下载代理完成: %s %s (状态码: %d)", c.Request.Method, c.Request.URL.Path, resp.StatusCode))
 }

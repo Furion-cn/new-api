@@ -61,6 +61,30 @@ func Distribute() func(c *gin.Context) {
 			userGroup = tokenGroup
 		}
 		c.Set("group", userGroup)
+		
+		// 检查是否为 /v1/videos/video_xxx 或 /v1/videos/video_xxx/content 路径，如果是，从 Redis 获取渠道 ID
+		if !ok && strings.HasPrefix(c.Request.URL.Path, "/v1/videos/video_") {
+			// 从路径中提取 video_id
+			// 路径格式: /v1/videos/video_xxx 或 /v1/videos/video_xxx/content
+			pathParts := strings.Split(c.Request.URL.Path, "/")
+			if len(pathParts) >= 4 && strings.HasPrefix(pathParts[3], "video_") {
+				videoId := pathParts[3]
+				// 从 Redis 获取渠道 ID
+				if common.RedisEnabled {
+					channelIdStr, err := common.RedisGet(videoId)
+					if err == nil && channelIdStr != "" {
+						common.LogInfo(c, fmt.Sprintf("从 Redis 获取到 video_id=%s 对应的渠道 ID=%s", videoId, channelIdStr))
+						// 设置到上下文，后续会使用这个渠道 ID
+						c.Set("specific_channel_id", channelIdStr)
+						ok = true
+						channelId = channelIdStr
+					} else {
+						common.LogInfo(c, fmt.Sprintf("Redis 中未找到 video_id=%s 对应的渠道 ID", videoId))
+					}
+				}
+			}
+		}
+
 		if ok {
 			id, err := strconv.Atoi(channelId.(string))
 			if err != nil {

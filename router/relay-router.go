@@ -88,6 +88,12 @@ func SetRelayRouter(router *gin.Engine) {
 		httpRouter.POST("/moderations", controller.Relay)
 		httpRouter.POST("/rerank", controller.Relay)
 		httpRouter.POST("/messages", controller.Relay)
+		// 视频相关路由：GET 和 DELETE /v1/videos/video_xxx 走直接下载代理，POST /v1/videos 走 Relay
+		// 注意：这个路由需要在 /videos 之前注册，以确保优先匹配
+		httpRouter.GET("/videos/:videoId/content", controller.VideoDownloadProxy)
+		httpRouter.GET("/videos/:videoId", controller.VideoDownloadProxy)
+		httpRouter.DELETE("/videos/:videoId", controller.VideoDownloadProxy)
+		httpRouter.POST("/videos", controller.Relay)
 	}
 
 	// v2 路由，所有请求统一走 Relay
