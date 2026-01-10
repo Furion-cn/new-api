@@ -138,6 +138,7 @@ func CacheGetRandomSatisfiedChannelExclude(group string, model string, retry int
 	targetPriority := int64(sortedUniquePriorities[retry])
 
 	// get the priority for the given retry number
+	// 注意：这里的 channels 已经在第98-110行排除过已使用的渠道了，所以不需要再次排除
 	var targetChannels []*Channel
 	for _, channel := range channels {
 		if channel.GetPriority() == targetPriority {
@@ -145,18 +146,8 @@ func CacheGetRandomSatisfiedChannelExclude(group string, model string, retry int
 		}
 	}
 
-	// 再次排除已使用的渠道（从目标优先级渠道中）
-	if len(excludeChannelIds) > 0 {
-		filteredTargetChannels := []*Channel{}
-		for _, channel := range targetChannels {
-			if !excludeChannelIds[channel.Id] {
-				filteredTargetChannels = append(filteredTargetChannels, channel)
-			}
-		}
-		if len(filteredTargetChannels) == 0 {
-			return nil, errors.New("channel not found, all channels with target priority have been used")
-		}
-		targetChannels = filteredTargetChannels
+	if len(targetChannels) == 0 {
+		return nil, errors.New("channel not found, no channels with target priority")
 	}
 
 	// 平滑系数
