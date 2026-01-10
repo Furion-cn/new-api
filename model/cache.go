@@ -73,6 +73,10 @@ func SyncChannelCache(frequency int) {
 }
 
 func CacheGetRandomSatisfiedChannel(group string, model string, retry int) (*Channel, error) {
+	return CacheGetRandomSatisfiedChannelExclude(group, model, retry, nil)
+}
+
+func CacheGetRandomSatisfiedChannelExclude(group string, model string, retry int, excludeChannelIds map[int]bool) (*Channel, error) {
 	if strings.HasPrefix(model, "gpt-4-gizmo") {
 		model = "gpt-4-gizmo-*"
 	}
@@ -89,6 +93,20 @@ func CacheGetRandomSatisfiedChannel(group string, model string, retry int) (*Cha
 	channels := group2model2channels[group][model]
 	if len(channels) == 0 {
 		return nil, errors.New("channel not found")
+	}
+
+	// 排除已使用的渠道
+	if len(excludeChannelIds) > 0 {
+		filteredChannels := []*Channel{}
+		for _, channel := range channels {
+			if !excludeChannelIds[channel.Id] {
+				filteredChannels = append(filteredChannels, channel)
+			}
+		}
+		if len(filteredChannels) == 0 {
+			return nil, errors.New("channel not found, all channels have been used")
+		}
+		channels = filteredChannels
 	}
 
 	if retry == common.RetryTimes {
@@ -120,6 +138,7 @@ func CacheGetRandomSatisfiedChannel(group string, model string, retry int) (*Cha
 	targetPriority := int64(sortedUniquePriorities[retry])
 
 	// get the priority for the given retry number
+	// 注意：targetPriority 是从 channels 中提取的，所以一定能找到至少一个匹配的渠道
 	var targetChannels []*Channel
 	for _, channel := range channels {
 		if channel.GetPriority() == targetPriority {

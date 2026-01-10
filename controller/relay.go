@@ -450,10 +450,48 @@ func getChannel(c *gin.Context, group, originalModel string, retryCount int) (*m
 			Setting: settingStr,
 		}, nil
 	}
-	channel, err := model.CacheGetRandomSatisfiedChannel(group, originalModel, retryCount)
+
+	// 获取已使用的渠道列表，传递给 CacheGetRandomSatisfiedChannelExclude 以排除
+	excludeChannelIds := make(map[int]bool)
+	useChannelList := c.GetStringSlice("use_channel")
+	for _, chStr := range useChannelList {
+		if chId, err := strconv.Atoi(chStr); err == nil {
+			excludeChannelIds[chId] = true
+		}
+	}
+
+	if len(excludeChannelIds) > 0 {
+		excludedIds := make([]int, 0, len(excludeChannelIds))
+		for id := range excludeChannelIds {
+			excludedIds = append(excludedIds, id)
+		}
+		common.LogInfo(c, fmt.Sprintf("重试时排除已使用的渠道: %v (重试次数: %d)", excludedIds, retryCount))
+	}
+
+	channel, err := model.CacheGetRandomSatisfiedChannelExclude(group, originalModel, retryCount, excludeChannelIds)
 	if err != nil {
+		// 如果所有渠道都已使用，使用最后一个已使用的渠道
+		if strings.Contains(err.Error(), "all channels have been used") && len(useChannelList) > 0 {
+			lastChannelIdStr := useChannelList[len(useChannelList)-1]
+			lastChannelId, parseErr := strconv.Atoi(lastChannelIdStr)
+			if parseErr == nil {
+				lastChannel, getErr := model.GetChannelById(lastChannelId, true)
+				if getErr == nil && lastChannel != nil {
+					common.LogInfo(c, fmt.Sprintf("所有渠道都已使用，使用最后一个已使用的渠道: #%d (重试次数: %d)", lastChannelId, retryCount))
+					middleware.SetupContextForSelectedChannel(c, lastChannel, originalModel)
+					return lastChannel, nil
+				}
+			}
+		}
 		return nil, fmt.Errorf("获取重试渠道失败: %s", err.Error())
 	}
+
+	// 验证选择的渠道确实不在已使用列表中
+	if excludeChannelIds[channel.Id] {
+		return nil, fmt.Errorf("选择的重试渠道 #%d 在已使用列表中，这不应该发生", channel.Id)
+	}
+
+	common.LogInfo(c, fmt.Sprintf("重试时选择的新渠道: #%d (重试次数: %d)", channel.Id, retryCount))
 	middleware.SetupContextForSelectedChannel(c, channel, originalModel)
 	return channel, nil
 }
