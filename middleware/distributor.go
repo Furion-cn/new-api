@@ -61,7 +61,7 @@ func Distribute() func(c *gin.Context) {
 			userGroup = tokenGroup
 		}
 		c.Set("group", userGroup)
-		
+
 		// 检查是否为 /v1/videos/video_xxx 或 /v1/videos/video_xxx/content 路径，如果是，从 Redis 获取渠道 ID
 		if !ok && strings.HasPrefix(c.Request.URL.Path, "/v1/videos/video_") {
 			// 从路径中提取 video_id
@@ -247,6 +247,10 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 				modelRequest.Model = c.Param("model")
 			} else if strings.HasPrefix(c.Request.URL.Path, "/v1/images/generations") {
 				modelRequest.Model = "dall-e"
+			} else if strings.HasPrefix(c.Request.URL.Path, "/v1/images/edits") {
+				modelRequest.Model = "gpt-image-1.5"
+			} else if strings.HasPrefix(c.Request.URL.Path, "/v1/images/variations") {
+				modelRequest.Model = "gpt-image-1.5"
 			} else if strings.HasPrefix(c.Request.URL.Path, "/v1/audio/speech") {
 				modelRequest.Model = "tts-1"
 			} else if strings.HasPrefix(c.Request.URL.Path, "/v1/audio/translations") {
@@ -263,7 +267,18 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 				// 对于 multipart/form-data 格式，直接使用body解析
 				boundary := extractBoundary(contentType)
 				if boundary != "" {
-					modelRequest.Model = extractModelFromMultipart(body, boundary)
+					extractedModel := extractModelFromMultipart(body, boundary)
+					if extractedModel != "" {
+						modelRequest.Model = extractedModel
+					}
+					// 如果提取失败且是图片编辑/变体请求，使用默认值
+					if modelRequest.Model == "" {
+						if strings.HasPrefix(c.Request.URL.Path, "/v1/images/edits") {
+							modelRequest.Model = "gpt-image-1.5"
+						} else if strings.HasPrefix(c.Request.URL.Path, "/v1/images/variations") {
+							modelRequest.Model = "gpt-image-1.5"
+						}
+					}
 				}
 			} else {
 				// 请求体不为空且不是 multipart/form-data，尝试解析 JSON
@@ -291,6 +306,12 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 	}
 	if strings.HasPrefix(c.Request.URL.Path, "/v1/images/generations") {
 		modelRequest.Model = common.GetStringIfEmpty(modelRequest.Model, "dall-e")
+	}
+	if strings.HasPrefix(c.Request.URL.Path, "/v1/images/edits") {
+		modelRequest.Model = common.GetStringIfEmpty(modelRequest.Model, "gpt-image-1.5")
+	}
+	if strings.HasPrefix(c.Request.URL.Path, "/v1/images/variations") {
+		modelRequest.Model = common.GetStringIfEmpty(modelRequest.Model, "gpt-image-1.5")
 	}
 	if strings.HasPrefix(c.Request.URL.Path, "/v1/audio") {
 		relayMode := relayconstant.RelayModeAudioSpeech

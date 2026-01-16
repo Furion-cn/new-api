@@ -470,14 +470,18 @@ func getChannel(c *gin.Context, group, originalModel string, retryCount int) (*m
 
 	channel, err := model.CacheGetRandomSatisfiedChannelExclude(group, originalModel, retryCount, excludeChannelIds)
 	if err != nil {
-		// 如果所有渠道都已使用，使用最后一个已使用的渠道
-		if strings.Contains(err.Error(), "all channels have been used") && len(useChannelList) > 0 {
+		// 如果所有渠道都已使用，或者找不到渠道，使用最后一个已使用的渠道
+		if len(useChannelList) > 0 {
 			lastChannelIdStr := useChannelList[len(useChannelList)-1]
 			lastChannelId, parseErr := strconv.Atoi(lastChannelIdStr)
 			if parseErr == nil {
 				lastChannel, getErr := model.GetChannelById(lastChannelId, true)
 				if getErr == nil && lastChannel != nil {
-					common.LogInfo(c, fmt.Sprintf("所有渠道都已使用，使用最后一个已使用的渠道: #%d (重试次数: %d)", lastChannelId, retryCount))
+					if strings.Contains(err.Error(), "all channels have been used") {
+						common.LogInfo(c, fmt.Sprintf("所有渠道都已使用，使用最后一个已使用的渠道: #%d (重试次数: %d)", lastChannelId, retryCount))
+					} else {
+						common.LogInfo(c, fmt.Sprintf("无法找到新渠道 (%s)，使用最后一个已使用的渠道: #%d (重试次数: %d)", err.Error(), lastChannelId, retryCount))
+					}
 					middleware.SetupContextForSelectedChannel(c, lastChannel, originalModel)
 					return lastChannel, nil
 				}

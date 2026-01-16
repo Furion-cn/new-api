@@ -5,7 +5,7 @@ type TopUp struct {
 	UserId     int     `json:"user_id" gorm:"index"`
 	Amount     int     `json:"amount"`
 	Money      float64 `json:"money"`
-	TradeNo    string  `json:"trade_no"`
+	TradeNo    string  `json:"trade_no" gorm:"type:varchar(500);index"`
 	CreateTime int64   `json:"create_time"`
 	Status     string  `json:"status"`
 }
