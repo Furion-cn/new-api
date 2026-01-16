@@ -127,6 +127,27 @@ func InitDB() (err error) {
 			_, _ = sqlDB.Exec("ALTER TABLE channels MODIFY model_mapping TEXT;") // TODO: delete this line when most users have upgraded
 			// 修复usage字段长度限制问题，从TEXT改为LONGTEXT
 			_, _ = sqlDB.Exec("ALTER TABLE logs MODIFY usage LONGTEXT;")
+			// 修复 trade_no 字段：如果存在索引，先删除索引，然后修改列类型，再重新创建索引
+			// 查询 trade_no 上的所有索引名称
+			rows, err := sqlDB.Query("SELECT DISTINCT index_name FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'top_ups' AND column_name = 'trade_no'")
+			if err == nil {
+				var indexNames []string
+				for rows.Next() {
+					var indexName string
+					if err := rows.Scan(&indexName); err == nil {
+						indexNames = append(indexNames, indexName)
+					}
+				}
+				rows.Close()
+				// 删除所有 trade_no 上的索引
+				for _, indexName := range indexNames {
+					_, _ = sqlDB.Exec("ALTER TABLE top_ups DROP INDEX `" + indexName + "`")
+				}
+			}
+			// 修改列类型为 VARCHAR(500)，避免使用 LONGTEXT（LONGTEXT 不能用于索引）
+			_, _ = sqlDB.Exec("ALTER TABLE top_ups MODIFY COLUMN trade_no VARCHAR(500);")
+			// 重新创建索引（使用前缀索引，长度为 255）
+			_, _ = sqlDB.Exec("CREATE INDEX idx_top_ups_trade_no ON top_ups(trade_no(255));")
 		}
 		common.SysLog("database migration started")
 		err = migrateDB()
