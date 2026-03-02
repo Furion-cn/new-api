@@ -28,7 +28,7 @@ type Channel struct {
 	Balance            float64 `json:"balance"` // in USD
 	BalanceUpdatedTime int64   `json:"balance_updated_time" gorm:"bigint"`
 	Models             string  `json:"models"`
-	Group              string  `json:"group" gorm:"type:varchar(64);default:'default'"`
+	Group              string  `json:"group" gorm:"type:varchar(1000);default:'default'"`
 	UsedQuota          int64   `json:"used_quota" gorm:"bigint;default:0"`
 	ModelMapping       *string `json:"model_mapping" gorm:"type:text"`
 	//MaxInputTokens     *int    `json:"max_input_tokens" gorm:"default:0"`
@@ -103,32 +103,40 @@ func (channel *Channel) Save() error {
 	return DB.Save(channel).Error
 }
 
-func GetAllChannels(startIdx int, num int, selectAll bool, idSort bool) ([]*Channel, error) {
+func GetAllChannels(startIdx int, num int, selectAll bool, idSort bool, status int) ([]*Channel, error) {
 	var channels []*Channel
 	var err error
 	order := "priority desc"
 	if idSort {
 		order = "id desc"
 	}
+	tx := DB.Order(order)
+	if status > 0 {
+		tx = tx.Where("status = ?", status)
+	}
 	if selectAll {
-		err = DB.Order(order).Find(&channels).Error
+		err = tx.Find(&channels).Error
 	} else {
-		err = DB.Order(order).Limit(num).Offset(startIdx).Omit("key").Find(&channels).Error
+		err = tx.Limit(num).Offset(startIdx).Omit("key").Find(&channels).Error
 	}
 	return channels, err
 }
 
-func GetChannelsByTag(tag string, idSort bool) ([]*Channel, error) {
+func GetChannelsByTag(tag string, idSort bool, status int) ([]*Channel, error) {
 	var channels []*Channel
 	order := "priority desc"
 	if idSort {
 		order = "id desc"
 	}
-	err := DB.Where("tag = ?", tag).Order(order).Find(&channels).Error
+	tx := DB.Where("tag = ?", tag).Order(order)
+	if status > 0 {
+		tx = tx.Where("status = ?", status)
+	}
+	err := tx.Find(&channels).Error
 	return channels, err
 }
 
-func SearchChannels(keyword string, group string, model string, idSort bool) ([]*Channel, error) {
+func SearchChannels(keyword string, group string, model string, idSort bool, status int) ([]*Channel, error) {
 	var channels []*Channel
 	modelsCol := "`models`"
 
@@ -145,6 +153,9 @@ func SearchChannels(keyword string, group string, model string, idSort bool) ([]
 
 	// 构造基础查询
 	baseQuery := DB.Model(&Channel{}).Omit(keyCol)
+	if status > 0 {
+		baseQuery = baseQuery.Where("status = ?", status)
+	}
 
 	// 构造WHERE子句
 	var whereClause string
@@ -414,7 +425,7 @@ func EditChannelByTag(tag string, newTag *string, modelMapping *string, models *
 		return err
 	}
 	if shouldReCreateAbilities {
-		channels, err := GetChannelsByTag(updatedTag, false)
+		channels, err := GetChannelsByTag(updatedTag, false, 0)
 		if err == nil {
 			for _, channel := range channels {
 				err = channel.UpdateAbilities(nil)
@@ -457,13 +468,17 @@ func DeleteDisabledChannel() (int64, error) {
 	return result.RowsAffected, result.Error
 }
 
-func GetPaginatedTags(offset int, limit int) ([]*string, error) {
+func GetPaginatedTags(offset int, limit int, status int) ([]*string, error) {
 	var tags []*string
-	err := DB.Model(&Channel{}).Select("DISTINCT tag").Where("tag != ''").Offset(offset).Limit(limit).Find(&tags).Error
+	tx := DB.Model(&Channel{}).Select("DISTINCT tag").Where("tag != ''")
+	if status > 0 {
+		tx = tx.Where("status = ?", status)
+	}
+	err := tx.Offset(offset).Limit(limit).Find(&tags).Error
 	return tags, err
 }
 
-func SearchTags(keyword string, group string, model string, idSort bool) ([]*string, error) {
+func SearchTags(keyword string, group string, model string, idSort bool, status int) ([]*string, error) {
 	var tags []*string
 	modelsCol := "`models`"
 
@@ -479,6 +494,9 @@ func SearchTags(keyword string, group string, model string, idSort bool) ([]*str
 
 	// 构造基础查询
 	baseQuery := DB.Model(&Channel{}).Omit(keyCol)
+	if status > 0 {
+		baseQuery = baseQuery.Where("status = ?", status)
+	}
 
 	// 构造WHERE子句
 	var whereClause string

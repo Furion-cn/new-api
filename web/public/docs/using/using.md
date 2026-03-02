@@ -62,7 +62,7 @@ import base64
 # 初始化 client，传入 api_key 和自定义 base_url
 client = OpenAI(
     api_key="sk-xxxx",
-    base_url="https://www.furion-tech.com/v1/"
+    base_url="https://ai.unbound-future.cn/v1/"
 )
 ```
 
@@ -74,7 +74,7 @@ import google.generativeai as genai
 
 # 设置环境变量
 os.environ['GOOGLE_API_KEY'] = "sk-xxxx"
-os.environ['GOOGLE_GEMINI_BASE_URL'] = "https://www.furion-tech.com/"
+os.environ['GOOGLE_GEMINI_BASE_URL'] = "https://ai.unbound-future.cn/"
 
 # 初始化 Gemini 客户端
 client = genai.Client()
@@ -99,7 +99,7 @@ from google.genai import types
 import json,os
 
 os.environ['GOOGLE_API_KEY'] =  "sk-XXXXXXXXXX"
-os.environ['GOOGLE_GEMINI_BASE_URL'] = "https://www.furion-tech.com/"
+os.environ['GOOGLE_GEMINI_BASE_URL'] = "https://ai.unbound-future.cn/"
 
 client = genai.Client( )
 response = client.models.generate_content(
@@ -129,7 +129,7 @@ from google import genai
 from google.genai import types
 import os,json
 os.environ['GOOGLE_API_KEY'] = "sk-xxxxxxxxxxxx"
-os.environ['GOOGLE_GEMINI_BASE_URL'] = "https://www.furion-tech.com/"
+os.environ['GOOGLE_GEMINI_BASE_URL'] = "https://ai.unbound-future.cn/"
 client = genai.Client()
 prompt = "What is the sum of the first 50 prime numbers?"
 response = client.models.generate_content(

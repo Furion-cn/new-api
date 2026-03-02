@@ -78,6 +78,14 @@ COPY --from=builder2 /build/one-api /
 COPY docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
 
+# 预下载 tiktoken BPE 数据文件，避免运行时从网络下载导致启动慢
+RUN mkdir -p /tiktoken_cache && \
+    wget -O /tiktoken_cache/9b5ad71b2ce5302211f9c61530b329a4922fc6a4 \
+      "https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken" && \
+    wget -O /tiktoken_cache/fb374d419588a4632f3f557e76b4b70aebbca790 \
+      "https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken"
+ENV TIKTOKEN_CACHE_DIR=/tiktoken_cache
+
 EXPOSE 3000
 WORKDIR /data
 ENTRYPOINT ["/docker-entrypoint.sh"]

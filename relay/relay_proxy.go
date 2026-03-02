@@ -181,21 +181,43 @@ func ProxyHelper(c *gin.Context, relayInfo *relaycommon.RelayInfo, proxyRequest 
 	var responseBodyBytes []byte
 
 	if isStream {
-		// 流式响应：使用 TeeReader 来同时读取和转发数据
+		// 流式响应：逐块读取并立即转发+Flush，实现真正的流式返回
 		var buf bytes.Buffer
-		tee := io.TeeReader(httpResp.Body, &buf)
+		flusher, hasFlusher := c.Writer.(http.Flusher)
 
-		common.LogInfo(c, "Streaming response to client")
-		_, err = io.Copy(c.Writer, tee)
-		if err != nil {
-			common.LogError(c, fmt.Sprintf("Error streaming response: %v", err))
-			funcErr = service.OpenAIErrorWrapperLocal(err, "stream_copy_failed", http.StatusInternalServerError)
-			return funcErr
-		}
+		common.LogInfo(c, "Streaming response to client (true streaming)")
 
-		// 确保数据被发送
-		if flusher, ok := c.Writer.(http.Flusher); ok {
-			flusher.Flush()
+		// 使用小缓冲区逐块读取，每块写入后立即 Flush
+		readBuf := make([]byte, 4096)
+		for {
+			n, readErr := httpResp.Body.Read(readBuf)
+			if n > 0 {
+				// 同时写入缓冲区（用于后续日志和配额统计）
+				buf.Write(readBuf[:n])
+				// 立即写入客户端
+				_, writeErr := c.Writer.Write(readBuf[:n])
+				if writeErr != nil {
+					common.LogError(c, fmt.Sprintf("Error writing stream data: %v", writeErr))
+					// 客户端断开(broken pipe)，设置错误但不return，继续读取剩余数据用于计费
+					funcErr = service.OpenAIErrorWrapperLocal(writeErr, "write_stream_failed", http.StatusInternalServerError)
+					// 继续读取上游剩余数据到buf，确保计费准确
+					remaining, _ := io.ReadAll(httpResp.Body)
+					buf.Write(remaining)
+					break
+				}
+				// 立即 Flush，确保数据实时推送到客户端
+				if hasFlusher {
+					flusher.Flush()
+				}
+			}
+			if readErr != nil {
+				if readErr != io.EOF {
+					common.LogError(c, fmt.Sprintf("Error reading stream: %v", readErr))
+					funcErr = service.OpenAIErrorWrapperLocal(readErr, "stream_read_failed", http.StatusInternalServerError)
+					return funcErr
+				}
+				break
+			}
 		}
 
 		responseBodyBytes = buf.Bytes()
@@ -209,11 +231,12 @@ func ProxyHelper(c *gin.Context, relayInfo *relaycommon.RelayInfo, proxyRequest 
 		}
 
 		// 写入响应体到客户端
-		_, err = c.Writer.Write(responseBodyBytes)
-		if err != nil {
-			common.LogError(c, fmt.Sprintf("Error writing response: %v", err))
-			funcErr = service.OpenAIErrorWrapperLocal(err, "write_response_failed", http.StatusInternalServerError)
-			return funcErr
+		_, writeErr := c.Writer.Write(responseBodyBytes)
+		if writeErr != nil {
+			common.LogError(c, fmt.Sprintf("Error writing response: %v", writeErr))
+			// 客户端断开(broken pipe)时不直接返回，继续执行后续计费逻辑
+			// 因为上游已返回完整响应，tokens已消耗，需要记录计费
+			funcErr = service.OpenAIErrorWrapperLocal(writeErr, "write_response_failed", http.StatusInternalServerError)
 		}
 	}
 
@@ -276,7 +299,8 @@ func ProxyHelper(c *gin.Context, relayInfo *relaycommon.RelayInfo, proxyRequest 
 	// 处理配额和统计 - 直接使用 ProcessMapValues 处理的响应体
 	proxyPostConsumeQuota(c, relayInfo, nil, 0, 0, priceData, "", processedResponseStr)
 
-	return nil
+	// 如果写入客户端时出错(如broken pipe)，计费已完成，返回错误用于metrics统计
+	return funcErr
 }
 
 // proxyPostConsumeQuota 后处理配额（代理专用版本）

@@ -57,9 +57,10 @@ func GetAllChannels(c *gin.Context) {
 	channelData := make([]*model.Channel, 0)
 	idSort, _ := strconv.ParseBool(c.Query("id_sort"))
 	enableTagMode, _ := strconv.ParseBool(c.Query("tag_mode"))
+	status, _ := strconv.Atoi(c.Query("status"))
 
 	if enableTagMode {
-		tags, err := model.GetPaginatedTags(p*pageSize, pageSize)
+		tags, err := model.GetPaginatedTags(p*pageSize, pageSize, status)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -69,7 +70,7 @@ func GetAllChannels(c *gin.Context) {
 		}
 		for _, tag := range tags {
 			if tag != nil && *tag != "" {
-				tagChannel, err := model.GetChannelsByTag(*tag, idSort)
+				tagChannel, err := model.GetChannelsByTag(*tag, idSort, status)
 				if err == nil {
 					// 过滤非管理员可见的渠道
 					if userRole < 100 {
@@ -92,7 +93,7 @@ func GetAllChannels(c *gin.Context) {
 			}
 		}
 	} else {
-		channels, err := model.GetAllChannels(p*pageSize, pageSize, false, idSort)
+		channels, err := model.GetAllChannels(p*pageSize, pageSize, false, idSort, status)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -211,6 +212,7 @@ func SearchChannels(c *gin.Context) {
 	modelKeyword := c.Query("model")
 	idSort, _ := strconv.ParseBool(c.Query("id_sort"))
 	enableTagMode, _ := strconv.ParseBool(c.Query("tag_mode"))
+	status, _ := strconv.Atoi(c.Query("status"))
 
 	// 获取用户信息
 	userRole := c.GetInt("role")
@@ -218,7 +220,7 @@ func SearchChannels(c *gin.Context) {
 
 	channelData := make([]*model.Channel, 0)
 	if enableTagMode {
-		tags, err := model.SearchTags(keyword, group, modelKeyword, idSort)
+		tags, err := model.SearchTags(keyword, group, modelKeyword, idSort, status)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -228,7 +230,7 @@ func SearchChannels(c *gin.Context) {
 		}
 		for _, tag := range tags {
 			if tag != nil && *tag != "" {
-				tagChannel, err := model.GetChannelsByTag(*tag, idSort)
+				tagChannel, err := model.GetChannelsByTag(*tag, idSort, status)
 				if err == nil {
 					// 过滤非管理员可见的渠道
 					if userRole < 100 {
@@ -251,7 +253,7 @@ func SearchChannels(c *gin.Context) {
 			}
 		}
 	} else {
-		channels, err := model.SearchChannels(keyword, group, modelKeyword, idSort)
+		channels, err := model.SearchChannels(keyword, group, modelKeyword, idSort, status)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,

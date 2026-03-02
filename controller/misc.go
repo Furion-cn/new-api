@@ -9,7 +9,6 @@ import (
 	"one-api/setting"
 	"one-api/setting/operation_setting"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -275,11 +274,32 @@ func ResetPassword(c *gin.Context) {
 }
 
 func Ping(c *gin.Context) {
-	time.Sleep(30 * time.Second)
 	c.JSON(http.StatusOK, gin.H{
 		"success":   true,
 		"message":   "pong",
 		"timestamp": common.GetTimestamp(),
 	})
 	return
+}
+
+// Healthz 存活探针 - 轻量级，仅检查进程是否存活
+func Healthz(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status": "ok",
+	})
+}
+
+// Readyz 就绪探针 - 检查数据库连接是否正常，确认可以接收流量
+func Readyz(c *gin.Context) {
+	err := model.PingDB()
+	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status":  "not ready",
+			"message": "database connection failed",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": "ready",
+	})
 }

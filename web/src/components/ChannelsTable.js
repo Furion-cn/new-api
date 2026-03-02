@@ -523,6 +523,10 @@ const ChannelsTable = () => {
   const [showModelTestModal, setShowModelTestModal] = useState(false);
   const [currentTestChannel, setCurrentTestChannel] = useState(null);
   const [modelSearchKeyword, setModelSearchKeyword] = useState('');
+  const [hideDisabled, setHideDisabled] = useState(() => {
+    const saved = localStorage.getItem('hide-disabled-channels');
+    return saved === null ? true : saved === 'true';
+  });
 
 
   const removeRecord = (record) => {
@@ -626,11 +630,13 @@ const ChannelsTable = () => {
     }
   };
 
-  const loadChannels = async (startIdx, pageSize, idSort, enableTagMode) => {
+  const loadChannels = async (startIdx, pageSize, idSort, enableTagMode, hideDisabledParam) => {
     setLoading(true);
-    const res = await API.get(
-      `/api/channel/?p=${startIdx}&page_size=${pageSize}&id_sort=${idSort}&tag_mode=${enableTagMode}`
-    );
+    let url = `/api/channel/?p=${startIdx}&page_size=${pageSize}&id_sort=${idSort}&tag_mode=${enableTagMode}`;
+    if (hideDisabledParam) {
+      url += '&status=1';
+    }
+    const res = await API.get(url);
     if (res === undefined) {
       return;
     }
@@ -674,7 +680,7 @@ const ChannelsTable = () => {
   };
 
   const refresh = async () => {
-    await loadChannels(activePage - 1, pageSize, idSort, enableTagMode);
+    await loadChannels(activePage - 1, pageSize, idSort, enableTagMode, hideDisabled);
   };
 
   useEffect(() => {
@@ -684,7 +690,7 @@ const ChannelsTable = () => {
       parseInt(localStorage.getItem('page-size')) || ITEMS_PER_PAGE;
     setIdSort(localIdSort);
     setPageSize(localPageSize);
-    loadChannels(0, localPageSize, localIdSort, enableTagMode)
+    loadChannels(0, localPageSize, localIdSort, enableTagMode, hideDisabled)
       .then()
       .catch((reason) => {
         showError(reason);
@@ -777,14 +783,16 @@ const ChannelsTable = () => {
 
   const searchChannels = async (searchKeyword, searchGroup, searchModel, enableTagMode) => {
     if (searchKeyword === '' && searchGroup === '' && searchModel === '') {
-      await loadChannels(0, pageSize, idSort, enableTagMode);
+      await loadChannels(0, pageSize, idSort, enableTagMode, hideDisabled);
       setActivePage(1);
       return;
     }
     setSearching(true);
-    const res = await API.get(
-      `/api/channel/search?keyword=${searchKeyword}&group=${searchGroup}&model=${searchModel}&id_sort=${idSort}&tag_mode=${enableTagMode}`
-    );
+    let searchUrl = `/api/channel/search?keyword=${searchKeyword}&group=${searchGroup}&model=${searchModel}&id_sort=${idSort}&tag_mode=${enableTagMode}`;
+    if (hideDisabled) {
+      searchUrl += '&status=1';
+    }
+    const res = await API.get(searchUrl);
     const { success, message, data } = res.data;
     if (success) {
       setChannelFormat(data, enableTagMode);
@@ -927,7 +935,7 @@ const ChannelsTable = () => {
     setActivePage(page);
     if (page === Math.ceil(channels.length / pageSize) + 1) {
       // In this case we have to load more data and then append them.
-      loadChannels(page - 1, pageSize, idSort, enableTagMode).then((r) => {
+      loadChannels(page - 1, pageSize, idSort, enableTagMode, hideDisabled).then((r) => {
       });
     }
   };
@@ -936,7 +944,7 @@ const ChannelsTable = () => {
     localStorage.setItem('page-size', size + '');
     setPageSize(size);
     setActivePage(1);
-    loadChannels(0, size, idSort, enableTagMode)
+    loadChannels(0, size, idSort, enableTagMode, hideDisabled)
       .then()
       .catch((reason) => {
         showError(reason);
@@ -1115,7 +1123,7 @@ const ChannelsTable = () => {
             onChange={(v) => {
               localStorage.setItem('id-sort', v + '');
               setIdSort(v);
-              loadChannels(0, pageSize, v, enableTagMode)
+              loadChannels(0, pageSize, v, enableTagMode, hideDisabled)
                 .then()
                 .catch((reason) => {
                   showError(reason);
@@ -1226,7 +1234,20 @@ const ChannelsTable = () => {
             aria-label={t('是否启用标签聚合')}
             onChange={(v) => {
               setEnableTagMode(v);
-              loadChannels(0, pageSize, idSort, v);
+              loadChannels(0, pageSize, idSort, v, hideDisabled);
+            }}
+          />
+          <Typography.Text strong>{t('隐藏禁用渠道')}</Typography.Text>
+          <Switch
+            checked={hideDisabled}
+            label={t('隐藏禁用渠道')}
+            uncheckedText={t('关')}
+            aria-label={t('是否隐藏禁用渠道')}
+            onChange={(v) => {
+              setHideDisabled(v);
+              localStorage.setItem('hide-disabled-channels', v + '');
+              setActivePage(1);
+              loadChannels(0, pageSize, idSort, enableTagMode, v);
             }}
           />
           <Button

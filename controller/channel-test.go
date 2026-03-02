@@ -268,7 +268,7 @@ func testAllChannels(notify bool) error {
 	}
 	testAllChannelsRunning = true
 	testAllChannelsLock.Unlock()
-	channels, err := model.GetAllChannels(0, 0, true, false)
+	channels, err := model.GetAllChannels(0, 0, true, false, 0)
 	if err != nil {
 		return err
 	}

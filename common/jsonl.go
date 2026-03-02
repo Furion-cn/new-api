@@ -18,6 +18,13 @@ import (
 var Writer *JSONLWriter
 
 func init() {
+	// 确保 oss_log 目录存在
+	if _, err := os.Stat("./oss_log"); os.IsNotExist(err) {
+		if mkErr := os.MkdirAll("./oss_log", 0755); mkErr != nil {
+			fmt.Printf("Failed to create oss_log dir: %v", mkErr)
+		}
+	}
+
 	tempDir, err := os.MkdirTemp("./oss_log", "jsonl_log_")
 	if err != nil {
 		fmt.Printf("Failed to create temp dir: %v", err)

@@ -14,6 +14,9 @@ func SetRelayRouter(router *gin.Engine) {
 
 	// 添加ping路由用于测试
 	router.GET("/ping", controller.Ping)
+	// K8s 探活端点
+	router.GET("/healthz", controller.Healthz)
+	router.GET("/readyz", controller.Readyz)
 	router.POST("/google/token", middleware.GoogleStorageLogger(), controller.GoogleToken)
 
 	// Google 相关路由组，应用路径校准和 OAuth 验证中间件

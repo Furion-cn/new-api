@@ -68,8 +68,6 @@ func InitPProfServer() {
 			enabled := PProfEnabled
 			PProfMutex.RUnlock()
 
-			SysLog(fmt.Sprintf("[PPROF] Status check - enabled: %v, serverRunning: %v", enabled, serverRunning))
-
 			if enabled && !serverRunning {
 				// 启动服务器
 				go func() {
