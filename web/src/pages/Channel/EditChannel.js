@@ -36,6 +36,11 @@ const STATUS_CODE_MAPPING_EXAMPLE = {
   400: '500'
 };
 
+const HEADER_FILTER_EXAMPLE = {
+  'X-Custom-Header': 'value1,value2',
+  'X-Another-Header': 'val1'
+};
+
 const REGION_EXAMPLE = {
   'default': 'us-central1',
   'claude-3-5-sonnet-20240620': 'europe-west1'
@@ -101,6 +106,7 @@ const EditChannel = (props) => {
   const [basicModels, setBasicModels] = useState([]);
   const [fullModels, setFullModels] = useState([]);
   const [customModel, setCustomModel] = useState('');
+  const [headerFilter, setHeaderFilter] = useState('');
   const handleInputChange = (name, value) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
     if (name === 'type') {
@@ -189,6 +195,14 @@ const EditChannel = (props) => {
           null,
           2
         );
+      }
+      if (data.setting) {
+        try {
+          const settingObj = JSON.parse(data.setting);
+          if (settingObj.header_filter) {
+            setHeaderFilter(JSON.stringify(settingObj.header_filter, null, 2));
+          }
+        } catch (e) { /* ignore parse error */ }
       }
       setInputs(data);
       if (data.auto_ban === 0) {
@@ -342,6 +356,30 @@ const EditChannel = (props) => {
     }
     if (localInputs.type === 18 && localInputs.other === '') {
       localInputs.other = 'v2.1';
+    }
+    if (headerFilter !== '') {
+      if (!verifyJSON(headerFilter)) {
+        showInfo(t('剔除Header配置必须是合法的 JSON 格式！'));
+        return;
+      }
+      let settingObj = {};
+      if (localInputs.setting) {
+        try {
+          settingObj = JSON.parse(localInputs.setting);
+        } catch (e) { /* ignore */ }
+      }
+      settingObj.header_filter = JSON.parse(headerFilter);
+      localInputs.setting = JSON.stringify(settingObj);
+    } else {
+      if (localInputs.setting) {
+        try {
+          let settingObj = JSON.parse(localInputs.setting);
+          if (settingObj.header_filter) {
+            delete settingObj.header_filter;
+            localInputs.setting = JSON.stringify(settingObj);
+          }
+        } catch (e) { /* ignore */ }
+      }
     }
     let res;
     if (!Array.isArray(localInputs.models)) {
@@ -1084,6 +1122,34 @@ const EditChannel = (props) => {
                 'status_code_mapping',
                 JSON.stringify(STATUS_CODE_MAPPING_EXAMPLE, null, 2)
               );
+            }}
+          >
+            {t('填入模板')}
+          </Typography.Text>
+          <div style={{ marginTop: 10 }}>
+            <Typography.Text strong>
+              {t('剔除Header')}：
+            </Typography.Text>
+          </div>
+          <TextArea
+            placeholder={t('此项可选，用于剔除转发请求中指定Header的特定值，JSON 格式，key 为 Header 名称，value 为逗号分隔的需要剔除的值，例如：') +
+              '\n' + JSON.stringify(HEADER_FILTER_EXAMPLE, null, 2)}
+            name="header_filter"
+            onChange={(value) => {
+              setHeaderFilter(value);
+            }}
+            autosize
+            value={headerFilter}
+            autoComplete="new-password"
+          />
+          <Typography.Text
+            style={{
+              color: 'rgba(var(--semi-blue-5), 1)',
+              userSelect: 'none',
+              cursor: 'pointer'
+            }}
+            onClick={() => {
+              setHeaderFilter(JSON.stringify(HEADER_FILTER_EXAMPLE, null, 2));
             }}
           >
             {t('填入模板')}

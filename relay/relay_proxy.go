@@ -97,6 +97,41 @@ func ProxyHelper(c *gin.Context, relayInfo *relaycommon.RelayInfo, proxyRequest 
 		req.Header.Set("Authorization", "Bearer "+relayInfo.ApiKey)
 	}
 
+	// 剔除Header：根据渠道设置中的 header_filter 移除匹配的 Header 值
+	if filterRaw, ok := relayInfo.ChannelSetting["header_filter"]; ok {
+		if filterMap, ok := filterRaw.(map[string]interface{}); ok {
+			for headerKey, filterValuesRaw := range filterMap {
+				filterValuesStr, ok := filterValuesRaw.(string)
+				if !ok {
+					continue
+				}
+				filterValues := strings.Split(filterValuesStr, ",")
+				filterSet := make(map[string]bool, len(filterValues))
+				for _, v := range filterValues {
+					filterSet[strings.TrimSpace(v)] = true
+				}
+				existingValues := req.Header.Values(headerKey)
+				if len(existingValues) == 0 {
+					continue
+				}
+				req.Header.Del(headerKey)
+				for _, ev := range existingValues {
+					// 对每个 header value 按逗号拆分，逐个检查并剔除匹配项
+					parts := strings.Split(ev, ",")
+					var kept []string
+					for _, p := range parts {
+						if !filterSet[strings.TrimSpace(p)] {
+							kept = append(kept, strings.TrimSpace(p))
+						}
+					}
+					if len(kept) > 0 {
+						req.Header.Add(headerKey, strings.Join(kept, ","))
+					}
+				}
+			}
+		}
+	}
+
 	// 打印请求URL
 	common.LogInfo(c, fmt.Sprintf("proxy request url: %s", req.URL.String()))
 

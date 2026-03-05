@@ -6,4 +6,5 @@ var (
 	ChannelSettingThinkingToContent = "thinking_to_content" // ThinkingToContent
 	ChannelSettingFallbackChannel   = "fallback_channel"    // FallbackChannel 兜底渠道标识
 	ChannelSettingPassthroughBody   = "passthrough_body"    // PassthroughBody 直接转发body，不修改内容
+	ChannelSettingHeaderFilter      = "header_filter"       // HeaderFilter 剔除转发请求中的指定Header
 )

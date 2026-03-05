@@ -92,6 +92,13 @@ func chooseDB(envName string) (*gorm.DB, error) {
 				dsn += "?parseTime=true"
 			}
 		}
+		if !strings.Contains(dsn, "charset") {
+			if strings.Contains(dsn, "?") {
+				dsn += "&charset=utf8mb4"
+			} else {
+				dsn += "?charset=utf8mb4"
+			}
+		}
 		common.UsingMySQL = true
 		return gorm.Open(mysql.Open(dsn), &gorm.Config{
 			PrepareStmt: true, // precompile SQL
